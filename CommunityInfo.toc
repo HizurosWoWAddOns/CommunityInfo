@@ -1,0 +1,10 @@
+## Interface: 80100
+## Title: Community Info
+## Notes: Display join, leave, online and offline messages like guilds and friends for communities in chat window and adds broker per community for panel addons like titan panel.
+## SavedVariables: CommunityInfoDB
+## OptionalDeps: LibStub, CallbackHandler-1.0, Ace3, LibDataBroker-1.1, LibDBIcon-1.0
+
+Localization.lua
+CommunityInfo.lua
+DataBroker.lua
+Options.lua
