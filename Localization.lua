@@ -9,6 +9,8 @@ ns.L = setmetatable(L,{
 	end
 });
 
+-- Do you want to help localizations? https://wow.curseforge.com/projects/communityinfo/localization
+
 --@do-not-package@
 L["AddOnLoaded"] = "AddOn loaded..."; -- CommunityInfo.lua | Options.lua
 L["AddOnLoadedDesc"] = "Display 'AddOn loaded...' message on login"; -- Options.lua
