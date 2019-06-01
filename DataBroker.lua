@@ -9,7 +9,7 @@ local LQT = LibStub("LibQTip-1.0");
 local C = WrapTextInColorCode;
 local CYellow,CYellowLight,CGreen,CBNet,CBlue,CGray = "ffffcc00","fffff569","ff00ff00","ff82c5ff","ff00aaff","ffaaaaaa";
 local broker,patternToonMembers,patternBNetMembers = {},C("%s",CGreen)..C("/%s",CYellow),C("%s",CGreen)..C("/%s",CBNet);
-local clubs = {};
+local clubs,broker_OnLeave = {};
 
 local COMMUNITY_MEMBER_ROLE_NAMES = {
 	[Enum.ClubRoleIdentifier.Owner] = COMMUNITY_MEMBER_ROLE_NAME_OWNER,
@@ -20,6 +20,12 @@ local COMMUNITY_MEMBER_ROLE_NAMES = {
 
 local function sortByName(a,b)
 	return a.name<b.name;
+end
+
+local function MouseIsOver(region, topOffset, bottomOffset, leftOffset, rightOffset)
+	if region and region.IsMouseOver then -- stupid blizzard does not check if exists...
+		return region:IsMouseOver(topOffset, bottomOffset, leftOffset, rightOffset);
+	end
 end
 
 local function GetTooltip(parent,clubId)
@@ -39,7 +45,14 @@ local function GetTooltip(parent,clubId)
 		AddOnSkins:SkinTooltip(tooltip); -- AddOnSkins support
 	end
 
-	club.tooltip = tooltip
+	if club.info.clubType==1 then
+		tooltip:SetScript("OnLeave",function()
+			broker_OnLeave(parent,clubId);
+		end);
+	end
+
+	club.tooltip = tooltip;
+
 	return tooltip;
 end
 
@@ -98,6 +111,15 @@ local function strWrap(text, limit, insetCount, insetChr, insetLastChr)
 		tinsert(result,tmp);
 	end
 	return table.concat(result,"|n"..inset)
+end
+
+local function memberInviteOrWhisperToon(self,info,button)
+	local invite,tell,link,text;
+	if IsAltKeyDown() then
+		InviteUnit(info.name);
+	else
+		SetItemRef("player:"..info.name, ("|Hplayer:%1$s|h[%1$s]|h"):format(info.name), "LeftButton");
+	end
 end
 
 local function broker_OnEnterClub(self,clubId)
@@ -175,7 +197,7 @@ local function broker_OnEnterClub(self,clubId)
 			realm = realm and C(" - "..realm,CYellow) or "";
 			local raceInfo = C_CreatureInfo.GetRaceInfo(memberInfo.race);
 
-			tt:AddLine(
+			local l = tt:AddLine(
 				memberInfo.level,
 				C(name or UNKNOWN,ns.class_color(memberInfo.classID)) .. realm,
 				C(raceInfo and raceInfo.raceName or "",CGray),
@@ -183,7 +205,17 @@ local function broker_OnEnterClub(self,clubId)
 				C(strCut(memberInfo.memberNote,18),CGray),
 				memberInfo.role and COMMUNITY_MEMBER_ROLE_NAMES[memberInfo.role] or ""
 			);
+			if memberInfo.isSelf then
+				tt:SetLineColor(l, .5, .5, .5);
+			elseif club.info.clubType==1 then -- Currently ivite and whisper are not possible for battlenet-lounge members
+				tt:SetLineScript(l,"OnMouseUp",memberInviteOrWhisperToon,memberInfo);
+			end
 		end
+	end
+
+	if club.info.clubType==1 then
+		tt:AddSeparator(4,0,0,0,0);
+		tt:SetCell(tt:AddLine(),1,C(L["MouseBtn"],CBlue).." || "..C(WHISPER,CGreen) .." - ".. C(L["ModKeyA"].."+"..L["MouseBtn"],CBlue).." || "..C(TRAVEL_PASS_INVITE,CGreen),nil,"LEFT",0);
 	end
 
 	tt:Show();
@@ -196,9 +228,14 @@ local function broker_OnClickClub(self,button,clubId)
 	end
 end
 
-local function broker_OnLeave(self,clubId)
-	LQT:Release(clubs[clubId].tooltip);
-	clubs[clubId].tooltip = nil;
+function broker_OnLeave(self,clubId,force)
+	local club = clubs[clubId];
+	force = force or club.info.clubType==0;
+	if club.tooltip and (force or not ((self and MouseIsOver(self,0,-3)) and (club.info.clubType==1 and MouseIsOver(club.tooltip,3)) )) then
+		club.tooltip:SetScript("OnLeave",nil);
+		LQT:Release(club.tooltip);
+		club.tooltip = nil;
+	end
 end
 
 function ns.Broker_Update(clubId,field)
