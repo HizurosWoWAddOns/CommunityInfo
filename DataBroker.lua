@@ -127,6 +127,8 @@ local function broker_OnEnterClub(self,clubId)
 	local clubColor = club.info.channelColor.hex or "ff888888";
 	local tt = GetTooltip(self,clubId);
 
+	if tt.lines~=nil then tt:Clear(); end
+
 	tt:SetCell(tt:AddLine(),1,C(club.info.name or "?",clubColor),tt:GetHeaderFont(),"LEFT",0);
 	tt:SetCell(tt:AddLine(),1,C(club.info.clubType==0 and COMMUNITIES_INVITATION_FRAME_TYPE or COMMUNITIES_INVITATION_FRAME_TYPE_CHARACTER,clubColor),"GameFontNormalSmall","LEFT",0);
 	tt:AddSeparator(4,0,0,0,0);
@@ -228,13 +230,17 @@ local function broker_OnClickClub(self,button,clubId)
 	end
 end
 
-function broker_OnLeave(self,clubId,force)
+function broker_OnLeave(self,clubId)
 	local club = clubs[clubId];
-	force = force or club.info.clubType==0;
-	if club.tooltip and (force or not ((self and MouseIsOver(self,0,-3)) and (club.info.clubType==1 and MouseIsOver(club.tooltip,3)) )) then
+	if not club.tooltip then return end
+	if not (self and MouseIsOver(self,0,-3)) and not (club.info.clubType==1 and MouseIsOver(club.tooltip,3)) then
 		club.tooltip:SetScript("OnLeave",nil);
 		LQT:Release(club.tooltip);
 		club.tooltip = nil;
+	elseif MouseIsOver(club.tooltip,3) then
+		C_Timer.After(0.5,function()
+			broker_OnLeave(self,clubId)
+		end);
 	end
 end
 
