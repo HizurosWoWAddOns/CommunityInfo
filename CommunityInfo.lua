@@ -153,6 +153,7 @@ local function update_clubs(obj)
 			ns.Options_AddCommunity(club);
 			ns.Broker_Register(club);
 			ns.icons.register(club.clubId);
+			C_Club.SetClubPresenceSubscription(club.clubId);
 			update_club_members(club.clubId);
 		end
 	else
@@ -382,6 +383,11 @@ frame:SetScript("OnEvent",function(self,event,...)
 			end
 		elseif addonName=="Blizzard_Communities" then
 			CommunitiesFrame:HookScript("OnShow",notification_lock);
+			CommunitiesFrame:HookScript("OnHide",function()
+				for _,club in ipairs(C_Club.GetSubscribedClubs()) do
+					C_Club.SetClubPresenceSubscription(club.clubId); -- reSubscribe OnHide after C_Club.ClearClubPresenceSubscription and C_Club.Flush
+				end
+			end);
 		end
 		return;
 	elseif event=="PLAYER_LOGIN" then
