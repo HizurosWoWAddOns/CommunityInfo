@@ -175,26 +175,7 @@ local function print_notifikation(event,clubId,memberId,presence)
 		presence = presenceMsg[presence];
 	end
 
---@do-not-package@
-	-- [[
-	ns.debug(
-		"<notification>",
-		event,
-		clubMemberId,
-		"Club-"..clubId.."-msgTarget="..tostring(clubMsgTarget),
-		"locked="..tostring(notification_locked),
-		"myID="..tostring(isMyID[clubMemberId]),
-		"new="..tostring(newMembers[clubMemberId]),
-		"status=("..tostring(clubMembersPresence[clubMemberId]).."=="..tostring(presence)..")",
-		member.name
-	);
-	--]]
---@end-do-not-package@
-
 	if not clubMsgTarget or clubMsgTarget=="0" or notification_locked or isMyID[clubMemberId] or newMembers[clubMemberId] or clubMembersPresence[clubMemberId]==presence or ChannelFrame:IsShown() then
---@do-not-package@
-		ns.debug("<notification>","<skipped>");
---@end-do-not-package@
 		return;
 	end
 
@@ -242,8 +223,8 @@ local function print_notifikation(event,clubId,memberId,presence)
 		end
 
 		-- player note
-		if CommunityInfoDB["Club-"..clubId.."-notes"] and member and member.note and member.note~="" then
-			note = " || |cffaaaaaa"..member.note.."|r";
+		if CommunityInfoDB["Club-"..clubId.."-notes"] and member and member.memberNote and member.memberNote~="" then
+			note = " |cffaaaaaa["..member.memberNote:trim().."]|r";
 		end
 
 		-- final message
@@ -373,11 +354,6 @@ frame:SetScript("OnEvent",function(self,event,...)
 		if addonName==addon then
 			frame.icon = frame:CreateTexture(nil,"ARTWORK");
 			ns.Options_Register();
---@do-not-package@
-			--if not C_ChatInfo.RegisterAddonMessagePrefix(msgPrefix) then
-				--ns.debug("<RegisterAddonMessagePrefix>","failed");
-			--end
---@end-do-not-package@
 			if CommunityInfoDB.addonloaded then
 				ns.print(L["AddOnLoaded"]);
 			end
@@ -411,8 +387,6 @@ frame:SetScript("OnEvent",function(self,event,...)
 	elseif event=="CLUB_MEMBER_REMOVED" or event=="CLUB_MEMBER_PRESENCE_UPDATED" then
 		local clubId, memberId, presence = ...;
 		print_notifikation(event,clubId,memberId,presence or 1);
-	--elseif event=="CHAT_MSG_ADDON" --[[and msgPrefix==...]] then
-		--ns.debug(event,...);
 	end
 end);
 

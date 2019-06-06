@@ -143,9 +143,6 @@ local function broker_OnEnterClub(self,clubId)
 			failed = true;
 		end
 	end
-	if failed then
-		ns.debug(name,"<failed on getting member infos>");
-	end
 	table.sort(members,sortByName);
 
 	if CommunityInfoDB["Club-"..clubId.."-motd"] and club.info.broadcast and club.info.broadcast:trim()~="" then
