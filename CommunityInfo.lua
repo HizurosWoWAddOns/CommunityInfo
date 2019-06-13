@@ -41,6 +41,32 @@ do
 	end
 end
 
+local function sortClubs(a,b)
+	return clubs[a].name<clubs[b].name;
+end
+
+ns.clubs = setmetatable({},{
+	__index = function(t,k)
+		if clubs[k] then
+			return clubs[k];
+		end
+	end,
+	__call = function(t,a,b)
+		local list,i={},0;
+		for k in pairs(clubs)do
+			tinsert(list,k);
+		end
+		table.sort(list,sortClubs);
+		local function iter()
+			i=i+1;
+			if list[i] then
+				return list[i],clubs[list[i]];
+			end
+		end
+		return iter;
+	end
+});
+
 function ns.class_color(classID)
 	if not classID then return "ffff0000"; end
 	local classInfo = C_CreatureInfo.GetClassInfo(classID);
@@ -66,6 +92,11 @@ function ns.updateOnline(clubId)
 			clubs[clubId].online = clubs[clubId].online+1;
 		end
 	end
+end
+
+function ns.channelColor(clubId)
+	local color = {}; color.r,color.g,color.b = Chat_GetCommunitiesChannelColor(clubId,1);
+	return color, ("ff%02x%02x%02x"):format(color.r*255,color.g*255,color.b*255);
 end
 
 local function update_club_members(clubId)
@@ -147,11 +178,8 @@ local function update_clubs(obj)
 				club.key = "Club-"..club.clubId;
 			end
 			club.channel = Chat_GetCommunitiesChannelName(club.clubId,1);
-			club.channelColor = {};
-			club.channelColor.r,club.channelColor.g,club.channelColor.b = Chat_GetCommunitiesChannelColor(club.clubId,1);
-			club.channelColor.hex = ("ff%02x%02x%02x"):format(club.channelColor.r*255,club.channelColor.g*255,club.channelColor.b*255);
-			ns.Options_AddCommunity(club);
-			ns.Broker_Register(club);
+			ns.Options_AddCommunity(club.clubId);
+			ns.Broker_Register(club.clubId);
 			ns.icons.register(club.clubId);
 			C_Club.SetClubPresenceSubscription(club.clubId);
 			update_club_members(club.clubId);

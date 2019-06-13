@@ -23,18 +23,18 @@ local function sortByName(a,b)
 end
 
 local function MouseIsOver(region, topOffset, bottomOffset, leftOffset, rightOffset)
-	if region and region.IsMouseOver then -- stupid blizzard does not check if exists...
+	if region and region.IsMouseOver then -- blizzard's own version does not check if region exists...
 		return region:IsMouseOver(topOffset, bottomOffset, leftOffset, rightOffset);
 	end
 end
 
 local function GetTooltip(parent,clubId)
-	local club,ttColumns,ttAlign = clubs[clubId],6,{"RIGHT", "LEFT", "LEFT", "LEFT","LEFT","LEFT"};
-	if club.info.clubType==0 then
+	local club,ttColumns,ttAlign = ns.clubs[clubId],6,{"RIGHT", "LEFT", "LEFT", "LEFT","LEFT","LEFT"};
+	if club.clubType==0 then
 		ttColumns, ttAlign = 4, {"LEFT", "RIGHT", "LEFT", "LEFT","LEFT","LEFT"};
 	end
 
-	local tooltip = LQT:Acquire(club.info.key,  ttColumns, unpack(ttAlign));
+	local tooltip = LQT:Acquire(club.key,  ttColumns, unpack(ttAlign));
 
 	tooltip:SmartAnchorTo(parent);
 
@@ -45,7 +45,7 @@ local function GetTooltip(parent,clubId)
 		AddOnSkins:SkinTooltip(tooltip); -- AddOnSkins support
 	end
 
-	if club.info.clubType==1 then
+	if club.clubType==1 then
 		tooltip:SetScript("OnLeave",function()
 			broker_OnLeave(parent,clubId);
 		end);
@@ -123,14 +123,15 @@ local function memberInviteOrWhisperToon(self,info,button)
 end
 
 local function broker_OnEnterClub(self,clubId)
-	local club,tt = clubs[clubId];
-	local clubColor = club.info.channelColor.hex or "ff888888";
+	local club,tt = ns.clubs[clubId];
+	local _,clubColor = ns.channelColor(clubId);
+	clubColor = clubColor or "ff888888";
 	local tt = GetTooltip(self,clubId);
 
 	if tt.lines~=nil then tt:Clear(); end
 
-	tt:SetCell(tt:AddLine(),1,C(club.info.name or "?",clubColor),tt:GetHeaderFont(),"LEFT",0);
-	tt:SetCell(tt:AddLine(),1,C(club.info.clubType==0 and COMMUNITIES_INVITATION_FRAME_TYPE or COMMUNITIES_INVITATION_FRAME_TYPE_CHARACTER,clubColor),"GameFontNormalSmall","LEFT",0);
+	tt:SetCell(tt:AddLine(),1,C(club.name or "?",clubColor),tt:GetHeaderFont(),"LEFT",0);
+	tt:SetCell(tt:AddLine(),1,C(club.clubType==0 and COMMUNITIES_INVITATION_FRAME_TYPE or COMMUNITIES_INVITATION_FRAME_TYPE_CHARACTER,clubColor),"GameFontNormalSmall","LEFT",0);
 	tt:AddSeparator(4,0,0,0,0);
 
 	local failed,members = false,C_Club.GetClubMembers(clubId);
@@ -145,21 +146,21 @@ local function broker_OnEnterClub(self,clubId)
 	end
 	table.sort(members,sortByName);
 
-	if CommunityInfoDB["Club-"..clubId.."-motd"] and club.info.broadcast and club.info.broadcast:trim()~="" then
+	if CommunityInfoDB["Club-"..clubId.."-motd"] and club.broadcast and club.broadcast:trim()~="" then
 		tt:SetCell(tt:AddLine(), 1, C(GUILD_MOTD_LABEL,CBlue),nil,"LEFT",0);
 		tt:AddSeparator();
-		tt:SetCell(tt:AddLine(), 1, C(strWrap(club.info.broadcast,80),CYellow), nil, "LEFT", 0);
+		tt:SetCell(tt:AddLine(), 1, C(strWrap(club.broadcast,80),CYellow), nil, "LEFT", 0);
 		tt:AddSeparator(4,0,0,0,0);
 	end
 
-	if CommunityInfoDB["Club-"..clubId.."-desc"] and club.info.description and club.info.description:trim()~="" then
+	if CommunityInfoDB["Club-"..clubId.."-desc"] and club.description and club.description:trim()~="" then
 		tt:SetCell(tt:AddLine(), 1, C(DESCRIPTION,CBlue),nil,"LEFT",0);
 		tt:AddSeparator();
-		tt:SetCell(tt:AddLine(), 1, C(strWrap(club.info.description,80),CYellow), nil, "LEFT", 0);
+		tt:SetCell(tt:AddLine(), 1, C(strWrap(club.description,80),CYellow), nil, "LEFT", 0);
 		tt:AddSeparator(4,0,0,0,0);
 	end
 
-	if club.info.clubType==0 then
+	if club.clubType==0 then
 		tt:AddLine(
 			--LEVEL,
 			C(NAME,CYellowLight),
@@ -182,7 +183,7 @@ local function broker_OnEnterClub(self,clubId)
 	for index, memberInfo in pairs(members)do
 		if memberInfo.presence==3 then
 			-- ignore offline
-		elseif club.info.clubType==0 then
+		elseif club.clubType==0 then
 			tt:AddLine(
 				--memberInfo.level,
 				C(memberInfo.name or UNKNOWN,clubColor),
@@ -206,13 +207,13 @@ local function broker_OnEnterClub(self,clubId)
 			);
 			if memberInfo.isSelf then
 				tt:SetLineColor(l, .5, .5, .5);
-			elseif club.info.clubType==1 then -- Currently ivite and whisper are not possible for battlenet-lounge members
+			elseif club.clubType==1 then -- Currently ivite and whisper are not possible for battlenet-lounge members
 				tt:SetLineScript(l,"OnMouseUp",memberInviteOrWhisperToon,memberInfo);
 			end
 		end
 	end
 
-	if club.info.clubType==1 then
+	if club.clubType==1 then
 		tt:AddSeparator(4,0,0,0,0);
 		tt:SetCell(tt:AddLine(),1,C(L["MouseBtn"],CBlue).." || "..C(WHISPER,CGreen) .." - ".. C(L["ModKeyA"].."+"..L["MouseBtn"],CBlue).." || "..C(TRAVEL_PASS_INVITE,CGreen),nil,"LEFT",0);
 	end
@@ -221,16 +222,16 @@ local function broker_OnEnterClub(self,clubId)
 end
 
 local function broker_OnClickClub(self,button,clubId)
-	local club = clubs[clubId];
+	local club = ns.clubs[clubId];
 	if button=="LeftButton" then
 	else
 	end
 end
 
 function broker_OnLeave(self,clubId)
-	local club = clubs[clubId];
+	local club = ns.clubs[clubId];
 	if not club.tooltip then return end
-	if not (self and MouseIsOver(self,0,-3)) and not (club.info.clubType==1 and MouseIsOver(club.tooltip,3)) then
+	if not (self and MouseIsOver(self,0,-3)) and not (club.clubType==1 and MouseIsOver(club.tooltip,3)) then
 		club.tooltip:SetScript("OnLeave",nil);
 		LQT:Release(club.tooltip);
 		club.tooltip = nil;
@@ -242,12 +243,13 @@ function broker_OnLeave(self,clubId)
 end
 
 function ns.Broker_Update(clubId,field)
-	local club,data = clubs[clubId];
+	local club,data = ns.clubs[clubId];
 	if field == "icon" then
-		data = club.info.iconId;
+		data = club.iconId;
 	elseif field=="text" then
 		ns.updateOnline(clubId);
-		data = patternToonMembers:format(club.info.online or 0,club.info.numMembers or 0);
+		ns.debug("<brokerUpdate>",clubId,field,club.online,club.numMembers);
+		data = patternToonMembers:format(club.online or 0,club.numMembers or 0);
 	end
 	if data then
 		(LDB:GetDataObjectByName(club.ldbName) or {})[field] = data;
@@ -255,7 +257,7 @@ function ns.Broker_Update(clubId,field)
 end
 
 function ns.Broker_ToggleMinimap(clubId,forceShow)
-	local club,show = clubs[clubId];
+	local club,show = ns.clubs[clubId];
 	if type(forceShow)=="boolean" then
 		show = forceShow;
 	else
@@ -266,7 +268,7 @@ function ns.Broker_ToggleMinimap(clubId,forceShow)
 end
 
 function ns.Broker_UpdateDirty(flag)
-	for club in pairsClubs() do
+	for clubId,club in ns.clubs() do
 		if flag then
 			club.dirty = true;
 		elseif club.dirty then
@@ -277,19 +279,13 @@ function ns.Broker_UpdateDirty(flag)
 	end
 end
 
-function ns.Broker_Register(club)
-	if clubs[club.clubId]==nil then
-		local bType,minimap = "Club",club.key.."-minimap";
-		club.ldbName = addon.."-"..club.key;
-		clubs[club.clubId]={
-			type = bType,
-			dbMinimap = minimap,
-			ldbName = club.ldbName,
-			info = club,
-		};
-	end
-	if clubs[club.clubId].ldbObject==nil then
-		clubs[club.clubId].ldbObject = LDB:NewDataObject(clubs[club.clubId].ldbName,{
+function ns.Broker_Register(clubId)
+	local club = ns.clubs[clubId];
+	if club==nil then return end
+	club.ldbName = addon.."-"..club.key;
+	club.dbMinimap = "Club",club.key.."-minimap";
+	if club.ldbObject==nil then
+		club.ldbObject = LDB:NewDataObject(club.ldbName,{
 			type      = "data source",
 			icon      = 134400,
 			iconCoors = club.clubType==0 and {0,1,0,1} or {0.05,0.95,0.05,0.95},
@@ -307,8 +303,8 @@ function ns.Broker_Register(club)
 		});
 
 		if LDBI then
-			LDBI:Register(clubs[club.clubId].ldbName, clubs[club.clubId].ldbObject, CommunityInfoDB[clubs[club.clubId].dbMinimap]);
+			LDBI:Register(club.ldbName, club.ldbObject, CommunityInfoDB[club.dbMinimap]);
 		end
 	end
-	clubs[club.clubId].dirty=nil;
+	club.dirty=nil;
 end
