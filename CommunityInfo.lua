@@ -14,6 +14,7 @@ local msgPrefix,presenceMsg = "CI",{
 	[5] = 1,--CHAT_DND_GET:gsub("%%s",""):gsub(":","")
 };
 ns.overview = {online=0,num=0}
+local failtry = {};
 
 do
 	local addon_short = "CI";
@@ -118,7 +119,7 @@ local function update_club_members(clubId)
 
 	for _,memberId in ipairs(members) do
 		local info = C_Club.GetMemberInfo(clubId,memberId);
-		if info and info.name and info.guid then
+		if info and info.name and info.guid and info.presence>0 then
 			local id = clubId.."-"..memberId;
 			if info.isSelf then
 				isMyID[id] = true;
@@ -143,6 +144,11 @@ local function update_club_members(clubId)
 			update_club_members(clubId);
 		end);
 	elseif failed then
+		failtry[clubId] = (failtry[clubId] or 0) + 1;
+		if failtry[clubId]>3 then
+			failtry[clubId] = 0;
+			return;
+		end
 		C_Timer.After(3, function()
 			update_club_members(clubId);
 		end);

@@ -134,14 +134,14 @@ local function broker_OnEnterClub(self,clubId)
 	tt:SetCell(tt:AddLine(),1,C(club.clubType==0 and COMMUNITIES_INVITATION_FRAME_TYPE or COMMUNITIES_INVITATION_FRAME_TYPE_CHARACTER,clubColor),"GameFontNormalSmall","LEFT",0);
 	tt:AddSeparator(4,0,0,0,0);
 
-	local failed,members = false,C_Club.GetClubMembers(clubId);
-	for index,memberId in ipairs(members) do
+	local failed,members = {},{};
+	for _,memberId in ipairs(C_Club.GetClubMembers(clubId)) do
 		local info = C_Club.GetMemberInfo(clubId,memberId);
-		if info then
+		if info and info.name and info.presence>0 then
 			info.id = memberId;
-			members[index] = info;
+			tinsert(members,info);
 		else
-			failed = true;
+			tinsert(failed,memberId);
 		end
 	end
 	table.sort(members,sortByName);
