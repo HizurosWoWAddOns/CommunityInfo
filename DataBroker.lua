@@ -116,7 +116,7 @@ end
 local function memberInviteOrWhisperToon(self,info,button)
 	local invite,tell,link,text;
 	if IsAltKeyDown() then
-		InviteUnit(info.name);
+		C_PartyInfo.InviteUnit(info.name);
 	else
 		SetItemRef("player:"..info.name, ("|Hplayer:%1$s|h[%1$s]|h"):format(info.name), "LeftButton");
 	end
