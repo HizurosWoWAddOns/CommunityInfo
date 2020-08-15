@@ -1,4 +1,4 @@
-## Interface: 803330
+## Interface: 80330
 ## Title: CommunityInfo
 ## Notes: Display join, leave, online and offline messages like guilds and friends for communities in chat window and adds broker per community for panel addons like titan panel.
 ## Author: Hizuro
