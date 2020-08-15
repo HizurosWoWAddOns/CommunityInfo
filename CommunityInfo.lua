@@ -10,8 +10,8 @@ local msgPrefix,presenceMsg = "CI",{
 	[1] = ERR_FRIEND_ONLINE_SS:gsub("\124Hplayer:%%s\124h%[%%s%]\124h",""):trim(),
 	--[2] = 1,
 	[3] = ERR_FRIEND_OFFLINE_S:gsub("%%s",""):trim(),
-	[4] = 1,--CHAT_AFK_GET:gsub("%%s",""):gsub(":",""),
-	[5] = 1,--CHAT_DND_GET:gsub("%%s",""):gsub(":","")
+	[4] = 1,--CHAT_AFK_GET:gsub("%%s",""):gsub(HEADER_COLON,""),
+	[5] = 1,--CHAT_DND_GET:gsub("%%s",""):gsub(HEADER_COLON,"")
 };
 ns.overview = {online=0,num=0}
 local failtry = {};
@@ -23,7 +23,7 @@ do
 		local t,c,a1 = {tostringall(...)},1,...;
 		if type(a1)=="boolean" then tremove(t,1); end
 		if a1~=false then
-			tinsert(t,1,"|cff0099ff"..((a1==true and addon_short) or (a1=="||" and "||") or addon).."|r"..(a1~="||" and ":" or ""));
+			tinsert(t,1,"|cff0099ff"..((a1==true and addon_short) or (a1=="||" and "||") or addon).."|r"..(a1~="||" and HEADER_COLON or ""));
 			c=2;
 		end
 		for i=c, #t do
@@ -166,7 +166,7 @@ local function update_clubs(obj)
 		if not club then
 			return;
 		end
-		if club.clubType~=2 then -- ignore guilds
+		if club.clubType==1 then
 			if not clubs[club.clubId] then
 				clubs[club.clubId] = club;
 				club.iconId = false;
