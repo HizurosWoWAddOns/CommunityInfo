@@ -202,7 +202,14 @@ end
 
 local function print_notifikation(event,clubId,memberId,presence)
 	if not clubs[clubId] then return end
-	local clubMemberId,clubMsgTarget = clubId.."-"..memberId,CommunityInfoDB["Club-"..clubId.."-msgTarget"];
+	ns.debug("notification",clubId,memberId,CommunityInfoDB["Club-"..clubId].enableInOrExclude,CommunityInfoDB["Club-"..clubId]["member-"..memberId]);
+	if (CommunityInfoDB["Club-"..clubId].enableInOrExclude==1 and not CommunityInfoDB["Club-"..clubId]["member-"..memberId]) -- include
+		or (CommunityInfoDB["Club-"..clubId].enableInOrExclude==2 and CommunityInfoDB["Club-"..clubId]["member-"..memberId]) -- exclude
+	then
+		ns.debug("ignore member")
+		return;
+	end
+	local clubMemberId,clubMsgTarget = clubId.."-"..memberId,CommunityInfoDB["Club-"..clubId]["msgTarget"];
 	local member = C_Club.GetMemberInfo(clubId,memberId);
 
 	if tonumber(presenceMsg[presence]) then -- replace presemceId
@@ -257,7 +264,7 @@ local function print_notifikation(event,clubId,memberId,presence)
 		end
 
 		-- player note
-		if CommunityInfoDB["Club-"..clubId.."-notes"] and member and member.memberNote and member.memberNote~="" then
+		if CommunityInfoDB["Club-"..clubId]["notes"] and member and member.memberNote and member.memberNote~="" then
 			note = " |cffaaaaaa["..member.memberNote:trim().."]|r";
 		end
 
@@ -433,14 +440,3 @@ frame:RegisterEvent("CLUB_MEMBER_REMOVED");
 frame:RegisterEvent("CLUB_MEMBER_PRESENCE_UPDATED");
 --frame:RegisterEvent("CHAT_MSG_ADDON");
 
---#known problems
---#- member join bnet lounge. no notification
---#- member goes offline. no or wrong notification
---#
---#TODO
---#- member status detection by C_ChatInfo.SendAddonMessage(addon, "1", "CHANNEL", club.channel) for invisible members?
---#- alert frames for motd
---#- add option for copy invite code from invite link (right click?)
---#- tooltip lines click functions (invite & wispher)
---#- join and leave message not enough tested yet -.-
---#- detect community changes: chat color, name, description, motd

@@ -4,7 +4,7 @@ local L,C = ns.L,WrapTextInColorCode;
 local faction = UnitFactionGroup("player");
 local AC = LibStub("AceConfig-3.0");
 local ACD = LibStub("AceConfigDialog-3.0");
-local clubChatValues,generalDefaults,clubDefaults = {
+local clubChatValues,generalDefaults,clubDefaults,options = {
 	["0"] = ADDON_DISABLED,
 	["1"] = GENERAL,
 	["2"] = L["SelectedChatWindow"] -- Into same chat window like community chat messages
@@ -16,15 +16,17 @@ local clubChatValues,generalDefaults,clubDefaults = {
 	notes = true,
 	motd = true,
 	desc = true,
+	enableInOrExclude = 0,
 }
 
 local function GetCommunityNameAndType(info)
 	local key,clubKey,clubId,club,name = info[#info];
-	for i=1, 4 do
+	for i=0, 4 do
 		clubkey = info[#info-i];
 		if clubkey and clubkey:find("^Club%-") then
 			clubId = tonumber(clubkey:match("^Club%-(%d+)")) or 0;
 			club = ns.clubs[clubId];
+			clubKey = clubkey;
 			break;
 		end
 	end
@@ -39,20 +41,53 @@ local function GetCommunityNameAndType(info)
 	end
 
 	local color, hex = ns.channelColor(club.clubId);
-	local icon = "|Tinterface\\friendsframe\\Battlenet-" .. (club.clubType==0 and "Battleneticon" or "WoWicon") .. ":16:16:0:-1:64:64:6:58:6:58|t ";
+	--local icon = "|Tinterface\\friendsframe\\Battlenet-" .. (club.clubType==0 and "Battleneticon" or "WoWicon") .. ":16:16:0:-1:64:64:6:58:6:58|t ";
 	local factionIcon = club.clubType~=0 and " |TInterface\\PVPFrame\\PVP-Currency-"..faction..":16:16:-2:-1:16:16:0:16:0:16|t" or "";
 	local name = C(club.name,hex);
 	if key=="label" then
-		return icon .. name .. factionIcon;
+		return factionIcon .. name;
 	end
-	return icon .. name .. factionIcon .. "\n" .. clubType;
+	return factionIcon .. name -- .. "\n" .. clubType;
+end
+
+local function addMembers(info)
+	if not info[#info] == "members" then return end
+	local clubKey = info[#info-2];
+	local clubId = tonumber(clubKey:match("(%d+)$"));
+	ns.debug("addMembers",clubKey,clubId);
+	local opt_members = options.args.communities.args[clubKey].args.include_exclude.args.members
+	wipe(opt_members.args);
+
+	local members = C_Club.GetClubMembers(clubId);
+	for _,memberId in ipairs(members) do
+		local info = C_Club.GetMemberInfo(clubId,memberId);
+		if info and info.name and info.guid and info.isSelf==false then
+			local id = "member-"..memberId;
+			local classInfo = C_CreatureInfo.GetClassInfo(info.classID);
+			local name, realm = strsplit("-",info.name);
+			local color = (CUSTOM_CLASS_COLORS or RAID_CLASS_COLORS)[classInfo.classFile];
+			local _name = name;
+			if color then
+				_name = color:WrapTextInColorCode(name);
+			end
+			if realm then
+				_name = _name .. C(" - "..realm,"ff888888");
+			end
+			opt_members.args[id] = {
+				type = "toggle", order = info.classID,
+				name = _name
+			}
+--@do-not-package@
+		else
+			ns.debug("no info for memberId",clubId,memberId);
+--@end-do-not-package@
+		end
+	end
+	return "";
 end
 
 local function opt(info,value,...)
 	local key = info[#info];
-	if #info>1 then
-		key = info[#info-1].."-"..key;
-	end
 	if value~=nil then
 		CommunityInfoDB[key] = value
 		return;
@@ -70,15 +105,28 @@ local function comOpt(info,value)
 			ns.Broker_ToggleMinimap(tonumber(club:match("(%d+)$")),value);
 			return;
 		end
-		CommunityInfoDB[club.."-"..key] = value
+		CommunityInfoDB[club][key] = value
 		return;
 	elseif key=="minimap" then
-		return not CommunityInfoDB[club.."-"..key].hide;
+		return not CommunityInfoDB[club][key].hide;
 	end
-	return CommunityInfoDB[club.."-"..key];
+	return CommunityInfoDB[club][key];
 end
 
-local options = {
+local function membOpt(info,value)
+	local member = info[#info];
+	local clubKey = info[#info-3];
+	if value~=nil then
+		if value == false then
+			value = nil;
+		end
+		CommunityInfoDB[clubKey][member] = value;
+		return;
+	end
+	return CommunityInfoDB[clubKey][member] or false;
+end
+
+options = {
 	type = "group",
 	name = addon,
 	childGroups = "tab",
@@ -94,7 +142,12 @@ local options = {
 			childGroups = "tree",
 			name = COMMUNITIES,
 			get = comOpt, set = comOpt,
-			args = {}
+			args = {
+				NoCommunityFound = {
+					type = "description", order = 0, fontSize = "large",
+					name = L["NoCommunityFound"]
+				}
+			}
 		},
 	}
 };
@@ -150,7 +203,37 @@ local comTpl = { -- community option table template
 					desc = L["NoteDesc"] -- Display member notes on notifigations
 				}
 			}
-		}
+		},
+
+		include_exclude = {
+			type = "group", order = 4, inline = true,
+			name =  C(L["IncludeExclude"],"ffff8800"),
+			args = {
+				enableInOrExclude = {
+					type = "select", order = 1, width = "full",
+					name = "", --"In- or exclude",
+					values = {
+						[0] = ADDON_DISABLED,
+						[1] = L["Include"],
+						[2] = L["Exclude"]
+					}
+				},
+				header = {
+					type = "header", order = 2,
+					name = MEMBERS
+				},
+				members = {
+					type = "group", order = 3, inline = true,
+					name = addMembers,
+					get = membOpt,
+					set = membOpt,
+					args = {
+						-- filled by function
+					}
+				}
+			}
+		},
+
 	}
 }
 
@@ -164,21 +247,28 @@ end
 
 function ns.Options_AddCommunity(clubId)
 	local club,clubKey = ns.clubs[clubId],"Club-"..clubId;
-	if club.clubId>0 then
-		local clubKey = clubKey.."-";
-		for optKey,value in pairs(clubDefaults)do
-			local t = type(value);
-			if type(CommunityInfoDB[clubKey..optKey])~=t then
-				CommunityInfoDB[clubKey..optKey] = (t=="table" and CopyTable(value)) or value;
-			end
-		end
-	end
-	if options.args.communities.args[clubKey] then
+
+	if club.clubType~=1 then
 		return;
 	end
-	options.args.communities.args[clubKey] = CopyTable(comTpl);
-	if club.clubType~=0 then
+
+	-- add community to option panel
+	if not options.args.communities.args[clubKey] then
+		options.args.communities.args[clubKey] = CopyTable(comTpl);
 		options.args.communities.args[clubKey].order = 50;
+		options.args.communities.args.NoCommunityFound.hidden = true;
+	end
+
+	-- check community savedvariables
+	if not CommunityInfoDB[clubKey] then
+		CommunityInfoDB[clubKey] = CopyTable(clubDefaults);
+	else
+		for optKey,value in pairs(clubDefaults)do
+			local t = type(value);
+			if type(CommunityInfoDB[clubKey][optKey])~=t then
+				CommunityInfoDB[clubKey][optKey] = (t=="table" and CopyTable(value)) or value;
+			end
+		end
 	end
 end
 
@@ -192,6 +282,17 @@ function ns.Options_Register()
 	for k,v in pairs(generalDefaults) do
 		if CommunityInfoDB[k]==nil then
 			CommunityInfoDB[k] = type(v)=="table" and CopyTable(v) or v;
+		end
+	end
+	-- remove old config entries
+	for key,value in pairs(CommunityInfoDB)do
+		local club, opts = key:match("^(Club%-%d+)%-(.+)$");
+		if club and opts then
+			if not CommunityInfoDB[club] then
+				CommunityInfoDB[club] = CopyTable(clubDefaults);
+			end
+			CommunityInfoDB[club][opts] = value;
+			CommunityInfoDB[key] = nil;
 		end
 	end
 	AC:RegisterOptionsTable(addon, options);

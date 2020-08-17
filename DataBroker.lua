@@ -146,14 +146,14 @@ local function broker_OnEnterClub(self,clubId)
 	end
 	table.sort(members,sortByName);
 
-	if CommunityInfoDB["Club-"..clubId.."-motd"] and club.broadcast and club.broadcast:trim()~="" then
+	if CommunityInfoDB["Club-"..clubId]["motd"] and club.broadcast and club.broadcast:trim()~="" then
 		tt:SetCell(tt:AddLine(), 1, C(GUILD_MOTD_LABEL,CBlue),nil,"LEFT",0);
 		tt:AddSeparator();
 		tt:SetCell(tt:AddLine(), 1, C(strWrap(club.broadcast,80),CYellow), nil, "LEFT", 0);
 		tt:AddSeparator(4,0,0,0,0);
 	end
 
-	if CommunityInfoDB["Club-"..clubId.."-desc"] and club.description and club.description:trim()~="" then
+	if CommunityInfoDB["Club-"..clubId]["desc"] and club.description and club.description:trim()~="" then
 		tt:SetCell(tt:AddLine(), 1, C(DESCRIPTION,CBlue),nil,"LEFT",0);
 		tt:AddSeparator();
 		tt:SetCell(tt:AddLine(), 1, C(strWrap(club.description,80),CYellow), nil, "LEFT", 0);
@@ -261,9 +261,9 @@ function ns.Broker_ToggleMinimap(clubId,forceShow)
 	if type(forceShow)=="boolean" then
 		show = forceShow;
 	else
-		show = not CommunityInfoDB[club.dbMinimap].hide;
+		show = not CommunityInfoDB[club.key].minimap.hide;
 	end
-	CommunityInfoDB[club.dbMinimap].hide = not show;
+	CommunityInfoDB[club.key].minimap.hide = not show;
 	LDBI:Refresh(club.ldbName);
 end
 
@@ -283,7 +283,6 @@ function ns.Broker_Register(clubId)
 	local club = ns.clubs[clubId];
 	if club==nil then return end
 	club.ldbName = addon.."-"..club.key;
-	club.dbMinimap = "Club",club.key.."-minimap";
 	if club.ldbObject==nil then
 		club.ldbObject = LDB:NewDataObject(club.ldbName,{
 			type      = "data source",
@@ -303,7 +302,7 @@ function ns.Broker_Register(clubId)
 		});
 
 		if LDBI then
-			LDBI:Register(club.ldbName, club.ldbObject, CommunityInfoDB[club.dbMinimap]);
+			LDBI:Register(club.ldbName, club.ldbObject, CommunityInfoDB[club.key].minimap);
 		end
 	end
 	club.dirty=nil;
