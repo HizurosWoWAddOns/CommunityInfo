@@ -13,6 +13,7 @@ local clubChatValues,generalDefaults,clubDefaults,options = {
 },{ -- clubDefaults
 	minimap = {hide=true},
 	msgTarget = "1",
+	msgTargetChannel = false,
 	notes = true,
 	motd = true,
 	desc = true,
@@ -22,11 +23,10 @@ local clubChatValues,generalDefaults,clubDefaults,options = {
 local function GetCommunityNameAndType(info)
 	local key,clubKey,clubId,club,name = info[#info];
 	for i=0, 4 do
-		clubkey = info[#info-i];
-		if clubkey and clubkey:find("^Club%-") then
-			clubId = tonumber(clubkey:match("^Club%-(%d+)")) or 0;
+		if info[#info-i] and info[#info-i]:find("^Club%-") then
+			clubId = tonumber(info[#info-i]:match("^Club%-(%d+)")) or 0;
 			club = ns.clubs[clubId];
-			clubKey = clubkey;
+			clubKey = info[#info-i];
 			break;
 		end
 	end
@@ -201,30 +201,35 @@ local comTpl = { -- community option table template
 					type = "toggle", order = 2,
 					name = LABEL_NOTE,
 					desc = L["NoteDesc"] -- Display member notes on notifigations
-				}
-			}
-		},
+				},
 
-		include_exclude = {
-			type = "group", order = 4, inline = true,
-			name =  C(L["IncludeExclude"],"ffff8800"),
-			args = {
+				-- notification in channel color as option?
+				--[[
+				color_header = {
+					type = "header", order = 3,
+					name = L["TextColor"]
+				},
+				-- select values ( channel color, default color, custom color  )
+				]]
+
+				filter_header = {
+					type = "header", order = 3,
+					name = FILTER
+				},
+
 				enableInOrExclude = {
-					type = "select", order = 1, width = "full",
+					type = "select", order = 4, width = "full",
 					name = "", --"In- or exclude",
 					values = {
-						[0] = ADDON_DISABLED,
-						[1] = L["Include"],
-						[2] = L["Exclude"]
+						[0] = L["NotificationFilter0"],
+						[1] = L["NotificationFilter1"],
+						[2] = L["NotificationFilter2"]
 					}
 				},
-				header = {
-					type = "header", order = 2,
-					name = MEMBERS
-				},
 				members = {
-					type = "group", order = 3, inline = true,
+					type = "group", order = 5, inline = true,
 					name = addMembers,
+					hidden = hideMembers,
 					get = membOpt,
 					set = membOpt,
 					args = {

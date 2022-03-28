@@ -1,29 +1,37 @@
 
-local addon,ns = ...;
+local addon, ns = ...;
 local L = ns.L;
 
-local clubs,clubMembersPresence,clubMemberName,isMyID,frame = {},{},{},{},false;
-local uniqueToonPresence,uniqueBNetPresence,tryCountMembers,newMembers = {},{},{},{};
-local msgPrefix,presenceMsg = "CI",{
+local icons,members,clubs,notificationLock,frame
+local clubChkChangedKeys,isMyID = {},{};
+local clubInitCustomVars = {
+	iconId = false,
+	numOnline = 0,
+	numMembers = 0,
+}
+local onlineMsg = ERR_FRIEND_ONLINE_SS:gsub("\124Hplayer:%%s\124h%[%%s%]\124h",""):trim();
+local msgPrefix,presenceMsg = addon,{
 	-- from table Enum.ClubMemberPresence
 	--[0] = "unknown",
-	[1] = ERR_FRIEND_ONLINE_SS:gsub("\124Hplayer:%%s\124h%[%%s%]\124h",""):trim(),
-	--[2] = 1,
+	[1] = onlineMsg,
+	[2] = onlineMsg.." (mobile)",
 	[3] = ERR_FRIEND_OFFLINE_S:gsub("%%s",""):trim(),
-	[4] = 1,--CHAT_AFK_GET:gsub("%%s",""):gsub(HEADER_COLON,""),
-	[5] = 1,--CHAT_DND_GET:gsub("%%s",""):gsub(HEADER_COLON,"")
+	[4] = onlineMsg.." (AFK)",--CHAT_AFK_GET:gsub("%%s",""):gsub(HEADER_COLON,""):trim(),
+	[5] = onlineMsg.." (DND)",--CHAT_DND_GET:gsub("%%s",""):gsub(HEADER_COLON,""):trim()
 };
-ns.overview = {online=0,num=0}
-local failtry = {};
+local validClubTypes = {
+	--[0] = true, -- bnet lounge
+	[1] = true, -- wow community
+}
 
 do
 	local addon_short = "CI";
-	local colors = {"0099ff","00ff00","ff6060","44ffff","ffff00","ff8800","ff44ff","ffffff"};
+	local colors = {"82c5ff","00ff00","ff6060","44ffff","ffff00","ff8800","ff44ff","ffffff"};
 	local function colorize(...)
 		local t,c,a1 = {tostringall(...)},1,...;
 		if type(a1)=="boolean" then tremove(t,1); end
 		if a1~=false then
-			tinsert(t,1,"|cff0099ff"..((a1==true and addon_short) or (a1=="||" and "||") or addon).."|r"..(a1~="||" and HEADER_COLON or ""));
+			tinsert(t,1,"|cff82c5ff"..((a1==true and addon_short) or (a1=="||" and "||") or addon).."|r"..(a1~="||" and HEADER_COLON or ""));
 			c=2;
 		end
 		for i=c, #t do
@@ -42,31 +50,47 @@ do
 	end
 end
 
-local function sortClubs(a,b)
-	return clubs[a].name<clubs[b].name;
+function ns.intIncrease(t,k,v)
+	t[k] = (t[k] or 0) + (v or 1);
 end
 
-ns.clubs = setmetatable({},{
-	__index = function(t,k)
-		if clubs[k] then
-			return clubs[k];
-		end
-	end,
-	__call = function(t,a,b)
-		local list,i={},0;
-		for k in pairs(clubs)do
-			tinsert(list,k);
-		end
-		table.sort(list,sortClubs);
-		local function iter()
-			i=i+1;
-			if list[i] then
-				return list[i],clubs[list[i]];
+function ns.intDecrease(t,k,v)
+	t[k] = (t[k] or 0) - (v or 1);
+end
+
+do
+	local function sortClubs(a,b)
+		return ns.clubs[a].name<ns.clubs[b].name;
+	end
+
+	ns.clubs = setmetatable({},{
+		__call = function(t,a,b)
+			if a=="updateCounter" and tonumber(b) then
+				t[b].numMembers = 0;
+				t[b].numOnline = 0;
+				for k,v in pairs(t[b].members)do
+					ns.intIncrease(t[b],"numMembers");
+					if v.presence~=3 then
+						ns.intIncrease(t[b],"numOnline");
+					end
+				end
+			else
+				local list,i={},0;
+				for k in pairs(t)do
+					tinsert(list,k);
+				end
+				table.sort(list,sortClubs);
+				local function iter()
+					i=i+1;
+					if list[i] then
+						return list[i],t[list[i]];
+					end
+				end
+				return iter;
 			end
 		end
-		return iter;
-	end
-});
+	});
+end
 
 function ns.class_color(classID)
 	if not classID then return "ffff0000"; end
@@ -75,368 +99,380 @@ function ns.class_color(classID)
 	return (color~=nil and color.colorStr~=nil and color.colorStr) or "ffff0000";
 end
 
-function ns.numUniqueMembers()
-	local oToons,nToons,oBNet,nBNet = 0,0,0,0;
-	for guid,presence in pairs(uniqueToonPresence)do
-		oToons,nToons = oToons+(presence~=3 and 1 or 0),nToons+1;
-	end
-	for guid,presence in pairs(uniqueBNetPresence)do
-		oBNet,nBNet = oBNet+(presence~=3 and 1 or 0),nBNet+1;
-	end
-	return oToons,nToons,oBNet,nBNet;
-end
-
-function ns.updateOnline(clubId)
-	clubs[clubId].online = 0;
-	for k,v in pairs(clubMembersPresence)do
-		if k:find("^"..clubId.."%-") and v~=3 then
-			clubs[clubId].online = clubs[clubId].online+1;
-		end
-	end
-end
-
 function ns.channelColor(clubId)
 	local color = {}; color.r,color.g,color.b = Chat_GetCommunitiesChannelColor(clubId,1);
 	return color, ("ff%02x%02x%02x"):format(color.r*255,color.g*255,color.b*255);
 end
 
-local function update_club_members(clubId)
-	local okay = true;
-	local members = C_Club.GetClubMembers(clubId);
+local function AddChatMsg(club,member,msg)
+	-- player color
+	local nameColor = "|c"..(club.clubType==0 and "ff00ffff" or ns.class_color(member.classID));
 
-	if tryCountMembers[clubId]==nil then
-		tryCountMembers[clubId] = 0;
+	-- player name/link
+	local name = nameColor..(member.name or UNKNOWN).."|r";
+	if member.presence~=3 then
+		name = "|Hplayer:"..member.name.."|h"..nameColor.."["..(member.name or UNKNOWN).."]|r|h"; -- online, added, removed
 	end
 
-	tryCountMembers[clubId]=false;
-
-	if clubs[clubId]==nil then
-		clubs[clubId] = {};
+	-- mobile icon
+	if member.presence==2 then
+		name = "|T457650:0|t "..name;
 	end
 
-	clubs[clubId].online,clubs[clubId].numMembers = 0,#members;
-	failed = false;
+	-- player note
+	local note=""
+	if CommunityInfoDB["Club-"..club.clubId]["notes"] and member and member.memberNote and member.memberNote~="" then
+		note = " |cffaaaaaa["..member.memberNote:trim().."]|r";
+	end
 
-	for _,memberId in ipairs(members) do
-		local info = C_Club.GetMemberInfo(clubId,memberId);
-		if info and info.name and info.guid and info.presence>0 then
-			local id = clubId.."-"..memberId;
-			if info.isSelf then
-				isMyID[id] = true;
+	-- channel color
+	local color = ns.channelColor(club.clubId);
+
+	-- club name
+	local clubName = club.name or UNKNOWN;
+	if club.shortName and club.shortName~="" then
+		clubName = club.shortName;
+	end
+
+	-- final message
+	local msg = "|cff0099ffCI|r: "..name.." "..msg.." ("..clubName..")"..note;
+
+	-- target channel
+	local clubMsgTarget = CommunityInfoDB["Club-"..club.clubId]["msgTarget"];
+	local clubMsgTargetChannel = CommunityInfoDB["Club-"..club.clubId]["msgTargetChannel"] or false;
+	if clubMsgTarget=="1" then
+		-- default chat frame
+		DEFAULT_CHAT_FRAME:AddMessage(msg,color.r,color.g,color.b);
+	elseif clubMsgTarget=="2" and clubMsgTargetChannel then
+		for i=1, FCF_GetNumActiveChatFrames() do
+			local chatFrame,add = _G['ChatFrame'..i],false;
+			if chatFrame~=COMBATLOG then
+				for c=1, #chatFrame.channelList do
+					if chatFrame.channelList[c]==clubMsgTargetChannel then
+						add = true;
+						break;
+					end
+				end
+				if add then
+					chatFrame:AddMessage(msg,color.r,color.g,color.b);
+				end
 			end
-			clubMemberName[id] = info.name;
-			if info.clubType==0 then
-				uniqueBNetPresence[info.guid] = info.presence;
-			else
-				uniqueToonPresence[info.guid] = info.presence;
-			end
-			clubMembersPresence[id] = info.presence;
-		else
-			failed = true;
 		end
-	end
-
-	ns.Broker_Update(clubId,"text");
-
-	if #members<=2 and tryCountMembers[clubId]~=false and tryCountMembers[clubId]<3 then -- unstable api; return 0-1 members on cold login
-		C_Timer.After(0.8,function()
-			tryCountMembers[clubId] = tryCountMembers[clubId]+1;
-			update_club_members(clubId);
-		end);
-	elseif failed then
-		failtry[clubId] = (failtry[clubId] or 0) + 1;
-		if failtry[clubId]>3 then
-			failtry[clubId] = 0;
-			return;
-		end
-		C_Timer.After(3, function()
-			update_club_members(clubId);
-		end);
 	end
 end
 
-local function update_clubs(obj)
-	if obj then
-		local club
-		if tonumber(obj) then
-			club = C_Club.GetClubInfo(obj);
-		elseif type(obj)=="table" and obj.clubId then
-			club = obj;
+icons = {
+	update=function()
+		local failed = false;
+		for key,club in pairs(ns.clubs)do
+			if tonumber(key) and club.avatarId and club.iconId==false then
+				C_Club.SetAvatarTexture(frame.icon, club.avatarId, club.clubType);
+				local iconId = frame.icon:GetTexture();
+				if iconId then
+					club.iconId = iconId;
+					ns.Broker_Update(club.clubId,"icon");
+				else
+					failed = true;
+				end
+			end
 		end
-		if not club then
-			return;
+		if failed then
+			C_Timer.After(0.314159,function() icons.update() end);
 		end
-		if club.clubType==1 then
-			if not clubs[club.clubId] then
-				clubs[club.clubId] = club;
-				club.iconId = false;
+	end,
+};
+
+members = {
+	fails = {},
+	queue = {},
+	presenceByBNetGuid={},
+	presenceByToonGuid={},
+
+	update = function(clubId)
+		if not (type(clubId)=="number" and ns.clubs[clubId]) then return end
+		local club = ns.clubs[clubId];
+
+		local failed = false;
+		local memberIds = C_Club.GetClubMembers(club.clubId);
+
+		if members.fails[club.clubId]==nil then
+			members.fails[club.clubId] = 0;
+		end
+
+		if ns.clubs[club.clubId]==nil then
+			ns.clubs[club.clubId] = club;
+		end
+
+		ns.clubs[club.clubId].numOnline = 0;
+		ns.clubs[club.clubId].numMembers = #members;
+
+		if club.members==nil then
+		--	club.members={};
+			ns.print("<MembersUpdate>","<ERROR>",club.clubId);
+		end
+
+		--[[
+		Enum.ClubMemberPresence
+			0 	Unknown
+			1 	Online
+			2 	OnlineMobile
+			3 	Offline
+			4 	Away
+			5 	Busy
+		]]
+
+		for _,memberId in ipairs(memberIds) do
+			local memberInfo = C_Club.GetMemberInfo(club.clubId,memberId);
+			if type(memberInfo)=="table" and memberInfo.name and memberInfo.guid then
+				if memberInfo.isSelf then
+					isMyID[club.clubId.."-"..memberId] = true;
+				end
+				club.members[memberId] = memberInfo;
+				if memberInfo.presence>0 and memberInfo.presence~=3 then
+					ns.intIncrease(ns.clubs[club.clubId],"numOnline");
+				end
 			else
-				if clubs[club.clubId].avatarId~=club.avatarId then
-					-- avatarId has been changed
-					clubs[club.clubId].iconId = false;
-				end
-				for k,v in pairs(club)do
-					clubs[club.clubId][k]=v;
-				end
-				club = clubs[club.clubId];
+				failed = true;
 			end
-			if club.key==nil then
-				club.key = "Club-"..club.clubId;
+		end
+
+		ns.Broker_Update(clubId,"text");
+
+		local maxTryouts,timeout = 0,0;
+		if #memberIds<=2 then -- slow network connects; return 0-1 members on login
+			maxTryouts,timeout = 6,0.8;
+		elseif failed then
+			maxTryouts,timeout = 3,3;
+		end
+
+		if maxTryouts>0 then
+			ns.intIncrease(members.fails,club.clubId);
+			if members.fails[club.clubId]>maxTryouts then
+				members.fails[club.clubId] = nil;
+				return; -- stop try to update member list
 			end
+			C_Timer.After(timeout,function()
+				members.update(club.clubId);
+			end);
+		elseif members.fails[club.clubId]~=nil then
+			members.fails[club.clubId] = nil;
+		end
+	end,
+
+	updatePresence=function(clubId,memberId)
+		local club = ns.clubs[clubId];
+		local memberInfo,msg = C_Club.GetMemberInfo(clubId,memberId);
+
+		if memberInfo then
+			if club.members[memberId]==nil then
+				club.members[memberId] = {presence=0};
+			end
+			if club.members[memberId].presence~=memberInfo.presence then
+				msg = presenceMsg[memberInfo.presence];
+				club.members[memberId].presence = memberInfo.presence;
+				ns.Broker_Update(clubId,"text");
+			end
+		end
+
+		members.queue[clubId.."-"..memberId]=nil;
+
+		if msg then
+			-- final message
+			AddChatMsg(club,memberInfo,msg);
+		end
+	end,
+
+	add = function(clubId,memberId)
+		if not ns.club2[clubId] then return end
+		local club = ns.clubs[clubId];
+		local memberInfo = C_Club.GetMemberInfo(clubId,memberId);
+		if memberInfo then
+			club.members[memberId] = memberInfo;
+			ns.intIncrease(club,"numMembers");
+			AddChatMsg(clubId,memberInfo,L["NotifyJoined"..(club.clubType==0 and "Lounge" or "Community")]);
+			ns.Broker_Update(clubId,"text");
+		end
+	end,
+
+	remove = function(clubId,memberId)
+		if not ns.club2[clubId] then return end
+		local club = ns.clubs[clubId];
+		local memberInfo = club.members[memberId];
+		if memberInfo then
+			AddChatMsg(clubId,memberInfo,L["NotifyLeaved"..club.clubType==0 and "Lounge" or "Community"]);
+			club.members[memberId] = nil;
+			ns.intDecrease(club,"numMembers");
+			ns.Broker_Update(clubId,"text");
+		end
+	end
+};
+
+clubs = {
+	update = function(club)
+		if tonumber(club) then
+			club = C_Club.GetClubInfo(club);
+		end
+
+		--[[
+			0 BattleNet Lounge (BattleNet account based)
+			1 WoW Community (Character based)
+			2 Guild
+			3 Other?
+		--]]
+
+		if not (type(club)=="table" and club.clubId and (club.clubType==1 --[[ or club.clubType==0 ]])) then
+			return false;
+		end
+
+		if not ns.clubs[club.clubId] then
+			ns.clubs[club.clubId] = club;
+			Mixin(club,clubInitCustomVars);
+			club.members = {};
+			club.key = "Club-"..club.clubId;
 			club.channel = Chat_GetCommunitiesChannelName(club.clubId,1);
 			ns.Options_AddCommunity(club.clubId);
 			ns.Broker_Register(club.clubId);
-			ns.icons.register(club.clubId);
 			C_Club.SetClubPresenceSubscription(club.clubId);
-			update_club_members(club.clubId);
+		else
+			if ns.clubs[club.clubId].avatarId~=club.avatarId then
+				-- avatarId has been changed
+				ns.clubs[club.clubId].iconId = false;
+			end
+			for k,v in pairs(club)do
+				if clubChkChangedKeys[k] and ns.clubs[club.clubId][k]~=v then
+					ns.clubs[club.clubId].hasChanged = true; -- for later use in option panel?
+				end
+				ns.clubs[club.clubId][k] = v;
+			end
 		end
-	else
+
+		return true;
+	end,
+
+	updateAll = function()
 		ns.Broker_UpdateDirty(true);
 		ns.Options_ResetCommunities();
 		for _,club in ipairs(C_Club.GetSubscribedClubs()) do
-			update_clubs(club);
+			if clubs.update(club) then
+				members.update(club.clubId);
+			end
 		end
 		ns.Broker_UpdateDirty();
+	end,
+
+	remove = function(clubId)
+		-- hide minimap icon
+		-- replace icon, text and tooltip (for panels)
+		-- look for unregistration
+
+		--ns.clubs[clubId] = nil;
+	end,
+}
+
+--== notificationLock ==--
+
+notificationLock = {
+	state = false,
+	unset = function()
+		notificationLock.state = false;
+		clubs.update();
+	end,
+	set = function()
+		-- blizzard firing wild CLUB_MEMBER_PRESENCE_UPDATED on open community frame.
+		-- this includes incorrect presence states for user there are using 'offline' status in battle net client.
+		-- for blizzard lounge and communities...
+		notificationLock.state = true;
+		C_Timer.After(2, notificationLock.unset);
 	end
-end
+};
 
-local function print_notifikation(event,clubId,memberId,presence)
-	if not clubs[clubId] then return end
-	ns.debug("notification",clubId,memberId,CommunityInfoDB["Club-"..clubId].enableInOrExclude,CommunityInfoDB["Club-"..clubId]["member-"..memberId]);
-	if (CommunityInfoDB["Club-"..clubId].enableInOrExclude==1 and not CommunityInfoDB["Club-"..clubId]["member-"..memberId]) -- include
-		or (CommunityInfoDB["Club-"..clubId].enableInOrExclude==2 and CommunityInfoDB["Club-"..clubId]["member-"..memberId]) -- exclude
-	then
-		ns.debug("ignore member")
-		return;
-	end
-	local clubMemberId,clubMsgTarget = clubId.."-"..memberId,CommunityInfoDB["Club-"..clubId]["msgTarget"];
-	local member = C_Club.GetMemberInfo(clubId,memberId);
+--== EventFrame ==--
 
-	if tonumber(presenceMsg[presence]) then -- replace presemceId
-		presence = presenceMsg[presence];
-	end
-
-	if not clubMsgTarget or clubMsgTarget=="0" or notification_locked or isMyID[clubMemberId] or newMembers[clubMemberId] or clubMembersPresence[clubMemberId]==presence or ChannelFrame:IsShown() then
-		return;
-	end
-
-	clubMembersPresence[clubMemberId] = presence; -- update presence
-
-	local note,name,msg = "",member and member.name;
-
-	local uniquePresence = uniqueToonPresence;
-	if clubs[clubId].clubType==0 then
-		uniquePresence = uniqueBNetPresence;
-	end
-
-	if member and member.guid and uniquePresence[member.guid]~=presence then
-		uniquePresence[member.guid] = presence;
-		ns.overview.online = ns.overview.online + (isOnlinr and 1 or -1);
-	end
-
-	if event=="CLUB_MEMBER_ADDED" then
-		newMembers[clubMemberId] = nil;
-		clubMembersPresence[clubMemberId] = member.presence;
-		clubMemberName[clubMemberId] = member.name;
-		msg = L["NotifyJoined"..(clubs[clubId].clubType==0 and "Lounge" or "Community")]; -- has joined the community.
-	elseif event=="CLUB_MEMBER_REMOVED" then
-		unsetMember = true;
-		name = clubMemberName[clubMemberId];
-		msg = L["NotifyLeaved"..(clubs[clubId].clubType==0 and "Lounge" or "Community")]; -- has leaved the community.
-	elseif event=="CLUB_MEMBER_PRESENCE_UPDATED" and presenceMsg[presence] then
-		msg = presenceMsg[presence];
-	end
-
-	if msg then
-		local name = name or member.name or UNKNOWN;
-		local clubName = clubs[clubId].name or UNKNOWN;
-
-		if clubs[clubId].shortName and clubs[clubId].shortName~="" then
-			clubName = clubs[clubId].shortName;
-		end
-
-		-- player link
-		local nameColor = clubs[clubId].clubType==0 and "ff00ffff" or ns.class_color(member.classID);
-		if name~=UNKNOWN and presence~=3 then
-			name = "|Hplayer:"..member.name.."|h|c"..nameColor.."["..name.."]|r|h"; -- online, added, removed
-		else
-			name = "|c"..nameColor..name.."|r";
-		end
-
-		-- player note
-		if CommunityInfoDB["Club-"..clubId]["notes"] and member and member.memberNote and member.memberNote~="" then
-			note = " |cffaaaaaa["..member.memberNote:trim().."]|r";
-		end
-
-		-- final message
-		msg = "|cff0099ffCI|r: "..name.." "..msg.." ("..clubName..")"..note;
-
-		-- channel color
-		local color = {}; color.r,color.g,color.b = Chat_GetCommunitiesChannelColor(clubId,1);
-
-		-- target channel
-		if clubMsgTarget=="1" then
-			DEFAULT_CHAT_FRAME:AddMessage(msg,color.r,color.g,color.b);
-		elseif clubMsgTarget=="2" and chat then
-			for i=1, FCF_GetNumActiveChatFrames() do
-				local chatFrame,add = _G['ChatFrame'..i],false;
-				if chatFrame~=COMBATLOG then
-					for c=1, #chatFrame.channelList do
-						if chatFrame.channelList[c]==chat then
-							add = true;
-							break;
-						end
-					end
-					if add then
-						chatFrame:AddMessage(msg,color.r,color.g,color.b);
-					end
-				end
-			end
-		end
-	end
-
-	C_Timer.After(0.1,function()
-		ns.Broker_Update(clubId,"text");
-	end);
-
-	if unsetMember then
-		clubMembersPresence[clubMemberId] = nil;
-		clubMemberName[clubMemberId] = nil;
-	end
-end
-
-local function notification_unlock()
-	notification_locked = false;
-	update_clubs();
-end
-
-local function notification_lock()
-	-- blizzard firing wild CLUB_MEMBER_PRESENCE_UPDATED on open community frame.
-	-- this includes incorrect presence states for user there are using 'offline' status in battle net client.
-	-- for blizzard lounge and communities...
-	notification_locked = true;
-	C_Timer.After(2, notification_unlock);
-end
-
-
- --                             --
--- New member data request queue --
- --                             --
-local newMember = {queue={}};
--- addon must wait to get memberInfo for new members...
-
-function newMember.tickerFunc()
-	if #newMember.queue>0 then
-		local event, clubId, memberId, presence = unpack(newMember.queue[1]);
-		local memberInfo = C_Club.GetMemberInfo(clubId, memberId);
-		if memberInfo and memberInfo.name then
-			tremove(newMember.queue,1);
-			print_notifikation(event, clubId, memberId, presence);
-		end
-	elseif newMember.ticker then
-		newMember.ticker:Cancel();
-		newMember.ticker = nil;
-	end
-end
-
-function newMember.add(...)
-	tinsert(newMember.queue,{...});
-	if not newMember.ticker then
-		newMember.ticker = C_Timer.NewTicker(0.1,newMember.tickerFunc);
-	end
-end
-
-
- --                  --
--- AvatarId to IconId --
- --                  --
-ns.icons = {queue={},ids={}};
-
-function ns.icons.tickerFunc()
-	if #ns.icons.queue>0 then
-		local clubId = ns.icons.queue[1];
-		if ns.icons.ids[clubs[clubId].avatarId..";"..clubs[clubId].clubType] then
-			local id = ns.icons.ids[clubs[clubId].avatarId..";"..clubs[clubId].clubType];
-			clubs[clubId].iconId = id;
-			ns.Broker_Update(clubId,"icon");
-			tremove(ns.icons.queue,1);
-		else
-			C_Club.SetAvatarTexture(frame.icon, clubs[clubId].avatarId, clubs[clubId].clubType);
-			local id = frame.icon:GetTexture();
-			if id then
-				ns.icons.ids[clubs[clubId].avatarId..";"..clubs[clubId].clubType] = id;
-				clubs[clubId].iconId = id;
-				ns.Broker_Update(clubId,"icon");
-				tremove(ns.icons.queue,1);
-			end
-		end
-	elseif ns.icons.ticker then
-		ns.icons.ticker:Cancel();
-		ns.icons.ticker = nil;
-	end
-end
-
-function ns.icons.register(clubId)
-	tinsert(ns.icons.queue,clubId);
-	if not ns.icons.ticker then
-		ns.icons.ticker = C_Timer.NewTicker(0.1,ns.icons.tickerFunc);
-	end
-end
-
-
- --          --
--- EventFrame --
- --          --
-frame = CreateFrame("frame");
+frame = CreateFrame("Frame");
+local events
 
 frame:SetScript("OnEvent",function(self,event,...)
-	if event=="ADDON_LOADED" then
-		local addonName = ...;
-		if addonName==addon then
-			frame.icon = frame:CreateTexture(nil,"ARTWORK");
-			ns.Options_Register();
-			if CommunityInfoDB.addonloaded then
-				ns.print(L["AddOnLoaded"]);
-			end
-		elseif addonName=="Blizzard_Communities" then
-			CommunitiesFrame:HookScript("OnShow",notification_lock);
-			CommunitiesFrame:HookScript("OnHide",function()
-				for _,club in ipairs(C_Club.GetSubscribedClubs()) do
-					C_Club.SetClubPresenceSubscription(club.clubId); -- reSubscribe OnHide after C_Club.ClearClubPresenceSubscription and C_Club.Flush
-				end
-			end);
-		end
-		return;
-	elseif event=="PLAYER_LOGIN" then
-		frame.PL = true;
-		C_Timer.After(10,function()
-			if frame.PL then
-				update_clubs();
-				frame.PL = nil;
-			end
-		end);
-	elseif event=="CLUB_ADDED" or event=="CLUB_REMOVED" then
-		local clubId = ...;
-		update_clubs(clubId);
-		if frame.PL then
-			frame.PL = nil;
-		end
-	elseif event=="CLUB_MEMBER_ADDED" then
-		local clubId, memberId = ...;
-		newMembers[clubId.."-"..memberId] = true;
-		newMember.add(event,clubId,memberId,1);
-	elseif event=="CLUB_MEMBER_REMOVED" or event=="CLUB_MEMBER_PRESENCE_UPDATED" then
-		local clubId, memberId, presence = ...;
-		print_notifikation(event,clubId,memberId,presence or 1);
+	if events[event] then
+		--ns.print("<Testing>","<event>",event,...);
+		events[event](...)
 	end
 end);
 
-frame:RegisterEvent("ADDON_LOADED");
-frame:RegisterEvent("PLAYER_LOGIN");
-frame:RegisterEvent("CLUB_ADDED");
-frame:RegisterEvent("CLUB_REMOVED");
-frame:RegisterEvent("CLUB_MEMBER_ADDED");
-frame:RegisterEvent("CLUB_MEMBER_REMOVED");
-frame:RegisterEvent("CLUB_MEMBER_PRESENCE_UPDATED");
---frame:RegisterEvent("CHAT_MSG_ADDON");
+events = {
+	VARIABLES_LOADED=function(...)
+		frame.icon = frame:CreateTexture(); -- for avatarId to iconId
+		ns.Options_Register();
+--@do-not-package@
+		if not C_ChatInfo.RegisterAddonMessagePrefix(msgPrefix) then
+			ns.debug("<RegisterAddonMessagePrefix>","failed");
+		end
+		--ns.RegisterCommunityMotDAlertSystem();
+--@end-do-not-package@
+		if CommunityInfoDB.addonloaded or IsShiftKeyDown() then
+			ns.print(L["AddOnLoaded"]);
+		end
+	end,
+
+	ADDON_LOADED=function(addonName)
+		if addonName=="Blizzard_Communities" then
+			CommunitiesFrame:HookScript("OnShow",function() notificationLock.set(); end);
+			CommunitiesFrame:HookScript("OnHide",function()
+				for clubId in pairs(ns.clubs) do
+					-- reSubscribe; CommunitiesFrame using C_Club.ClearClubPresenceSubscription and C_Club.Flush on hide
+					C_Club.SetClubPresenceSubscription(clubId);
+				end
+			end);
+			frame:UnregisterEvent("ADDON_LOADED");
+		end
+	end,
+
+	PLAYER_LOGIN=function(...)
+		C_Timer.After(12, function()
+			clubs.updateAll();
+			icons.update();
+			frame.PL=true;
+		end);
+	end,
+
+	CLUB_ADDED=function(clubId)
+		clubs.update(C_Club.GetClubInfo(clubId));
+		icons.update();
+	end,
+
+	CLUB_REMOVED=function(clubId)
+		clubs.remove(clubId);
+	end,
+
+	CLUB_MEMBER_PRESENCE_UPDATED=function(clubId, memberId, presence)
+		if not ns.clubs[clubId] then return end
+		if not members.queue[clubId.."-"..memberId] then
+			members.queue[clubId.."-"..memberId] = true;
+			C_Timer.After(3.14159265359*0.5,function() members.updatePresence(clubId,memberId); end);
+		end
+	end,
+
+	CLUB_MEMBER_ADDED=function(clubId,memberId)
+		members.add(clubId,memberId);
+	end,
+
+	CLUB_MEMBER_REMOVED=function(clubId,memberId)
+		members.remove(clubId,memberId);
+	end,
+
+	--[[
+	CHANNEL_UI_UPDATE=function(...)
+	end,
+
+	CHAT_MSG_ADDON=function(...)
+		if msgPrefix==... then
+			ns.debug("<ChatMsgAddOn>",...);
+		end
+	end,
+	]]
+
+};
+
+for event in pairs(events)do
+	frame:RegisterEvent(event);
+end
 

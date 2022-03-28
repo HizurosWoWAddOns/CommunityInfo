@@ -28,9 +28,9 @@ L["NotifyLeavedLounge"] = "has leaved the lounge."; -- CommunityInfo.lua
 L["NotificationTarget"] = "Show notifications in:"; -- Options.lua
 L["NotificationTargetDesc"] = "Choose in which chat window the notifications should be displayed."; -- Options.lua
 L["SelectedChatWindow"] = "Into same chat window like community chat messages"; -- Options.lua
-L["IncludeExclude"] = "In- or Exclude from notification"
-L["Include"] = "Include"
-L["Exclude"] = "Exclude"
+L["NotificationFilter0"] = "Show notifications for all"
+L["NotificationFilter1"] = "Show only notifications from ..."
+L["NotificationFilter2"] = "Don't show notifications from ..."
 --@end-do-not-package@
 
 --@localization(locale="enUS", format="lua_additive_table", handle-subnamespaces="none", handle-unlocalized="ignore")@
@@ -53,9 +53,9 @@ if LOCALE_deDE then
 	L["NotifyLeavedCommunity"] = "hat die Community verlassen."
 	L["NotifyLeavedLounge"] = "hat die Lounge verlassen."
 	L["SelectedChatWindow"] = "In das selbe Chatfenster wie die Community Chat Nachrichten"
-	L["IncludeExclude"] = "Ein- oder Ausschließen von Benachrichtigung"
-	L["Include"] = "Einschließen"
-	L["Exclude"] = "Ausschließen"
+	L["NotificationFilter0"] = "Zeige Benachrichtigungen für alle"
+	L["NotificationFilter1"] = "Zeige nur Benachrichtigungen von ..."
+	L["NotificationFilter2"] = "Zeige keine Benachrichtigungen von ..."
 --@end-do-not-package@
 --@localization(locale="deDE", format="lua_additive_table", handle-subnamespaces="none", handle-unlocalized="ignore")@
 end

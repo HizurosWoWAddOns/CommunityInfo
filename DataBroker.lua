@@ -8,8 +8,7 @@ local LQT = LibStub("LibQTip-1.0");
 
 local C = WrapTextInColorCode;
 local CYellow,CYellowLight,CGreen,CBNet,CBlue,CGray = "ffffcc00","fffff569","ff00ff00","ff82c5ff","ff00aaff","ffaaaaaa";
-local broker,patternToonMembers,patternBNetMembers = {},C("%s",CGreen)..C("/%s",CYellow),C("%s",CGreen)..C("/%s",CBNet);
-local clubs,broker_OnLeave = {};
+local broker,patternMembers,broker_OnLeave = {},"|C%s%s|C%s/%s|r";
 
 local COMMUNITY_MEMBER_ROLE_NAMES = {
 	[Enum.ClubRoleIdentifier.Owner] = COMMUNITY_MEMBER_ROLE_NAME_OWNER,
@@ -17,10 +16,6 @@ local COMMUNITY_MEMBER_ROLE_NAMES = {
 	[Enum.ClubRoleIdentifier.Moderator] = COMMUNITY_MEMBER_ROLE_NAME_MODERATOR,
 	[Enum.ClubRoleIdentifier.Member] = COMMUNITY_MEMBER_ROLE_NAME_MEMBER,
 };
-
-local function sortByName(a,b)
-	return a.name<b.name;
-end
 
 local function MouseIsOver(region, topOffset, bottomOffset, leftOffset, rightOffset)
 	if region and region.IsMouseOver then -- blizzard's own version does not check if region exists...
@@ -56,23 +51,6 @@ local function GetTooltip(parent,clubId)
 	return tooltip;
 end
 
-local function pairsClubs()
-	local keys,i,iter,_ = {},0;
-	for clubId,club in pairs(clubs) do
-		if clubId~=0 then
-			tinsert(keys,{clubId,name=club.info.name});
-		end
-	end
-	table.sort(keys,sortByName);
-	iter = function()
-		i=i+1;
-		if keys[i] then
-			return clubs[keys[i][1]];
-		end
-	end
-	return iter;
-end
-
 local function strCut(str,limit)
 	if not str then return ""; end
 	if str:len()>limit-3 then str = strsub(str,1,limit-3).."..." end
@@ -87,9 +65,9 @@ local function strWrap(text, limit, insetCount, insetChr, insetLastChr)
 		local txt = text:gsub("%|n","\n");
 		local strings,tmp = {strsplit("\n",txt)},{};
 		for i=1, #strings do
-			tinsert(tmp,ns.strWrap(strings[i], limit, insetCount, insetChr, insetLastChr));
+			tinsert(tmp,strWrap(strings[i], limit, insetCount, insetChr, insetLastChr));
 		end
-		return tconcat(tmp,"\n");
+		return table.concat(tmp,"\n");
 	end
 	if text:len()<=limit then
 		return text;
@@ -122,6 +100,28 @@ local function memberInviteOrWhisperToon(self,info,button)
 	end
 end
 
+local pairsByField
+do
+	local function sortField(a,b)
+		return a[2]<b[2];
+	end
+
+	function pairsByField(t,field)
+		local list,i={},0;
+		for k,v in pairs(t)do
+			tinsert(list,{k,v[field]});
+		end
+		table.sort(list,sortField);
+		local function iter()
+			i=i+1;
+			if list[i] then
+				return list[i][1],t[list[i][1]];
+			end
+		end
+		return iter;
+	end
+end
+
 local function broker_OnEnterClub(self,clubId)
 	local club,tt = ns.clubs[clubId];
 	local _,clubColor = ns.channelColor(clubId);
@@ -134,17 +134,22 @@ local function broker_OnEnterClub(self,clubId)
 	tt:SetCell(tt:AddLine(),1,C(club.clubType==0 and COMMUNITIES_INVITATION_FRAME_TYPE or COMMUNITIES_INVITATION_FRAME_TYPE_CHARACTER,clubColor),"GameFontNormalSmall","LEFT",0);
 	tt:AddSeparator(4,0,0,0,0);
 
+	--[[
 	local failed,members = {},{};
-	for _,memberId in ipairs(C_Club.GetClubMembers(clubId)) do
-		local info = C_Club.GetMemberInfo(clubId,memberId);
-		if info and info.name and info.presence>0 then
-			info.id = memberId;
-			tinsert(members,info);
+	for memberId,member in pairs(club.members) do
+		--local info = C_Club.GetMemberInfo(clubId,memberId);
+		if member and member.name and member.presence>0 then
+			tinsert(members,member);
 		else
 			tinsert(failed,memberId);
 		end
 	end
-	table.sort(members,sortByName);
+
+
+	if #failed>0 then
+		ns.debug("<failed on getting member infos>",table.concat(failed,", "));
+	end
+	--]]
 
 	if CommunityInfoDB["Club-"..clubId]["motd"] and club.broadcast and club.broadcast:trim()~="" then
 		tt:SetCell(tt:AddLine(), 1, C(GUILD_MOTD_LABEL,CBlue),nil,"LEFT",0);
@@ -180,7 +185,7 @@ local function broker_OnEnterClub(self,clubId)
 		);
 	end
 	tt:AddSeparator();
-	for index, memberInfo in pairs(members)do
+	for memberId, memberInfo in pairsByField(club.members,"name")do -- TODO: replace "name" by variable
 		if memberInfo.presence==3 then
 			-- ignore offline
 		elseif club.clubType==0 then
@@ -195,13 +200,32 @@ local function broker_OnEnterClub(self,clubId)
 		else
 			local name,realm = strsplit("-",memberInfo.name,2);
 			realm = realm and C(" - "..realm,CYellow) or "";
+
 			local raceInfo = C_CreatureInfo.GetRaceInfo(memberInfo.race);
+			local info = C_Club.GetMemberInfo(clubId,memberId);
+
+			if memberInfo.presence==2 and info.presence==1 then
+				memberInfo.presence=1
+			end
+
+			-- mobile icon
+			local icon = "";
+			if memberInfo.presence==2 then
+				icon = "|T457650:0|t ";
+			end
+
+			local hidden = "";
+			--[[
+			if info.presence==0 or info.presence==3 then
+				hidden = " (hidden)"; --L["PlayerMarkedAsOffline"];
+			end
+			--]]
 
 			local l = tt:AddLine(
 				memberInfo.level,
-				C(name or UNKNOWN,ns.class_color(memberInfo.classID)) .. realm,
+				icon .. C(name or UNKNOWN,ns.class_color(memberInfo.classID)) .. realm,
 				C(raceInfo and raceInfo.raceName or "",CGray),
-				memberInfo.zone or "",
+				(memberInfo.zone or "")..hidden,
 				C(strCut(memberInfo.memberNote,18),CGray),
 				memberInfo.role and COMMUNITY_MEMBER_ROLE_NAMES[memberInfo.role] or ""
 			);
@@ -247,9 +271,9 @@ function ns.Broker_Update(clubId,field)
 	if field == "icon" then
 		data = club.iconId;
 	elseif field=="text" then
-		ns.updateOnline(clubId);
-		ns.debug("<brokerUpdate>",clubId,field,club.online,club.numMembers);
-		data = patternToonMembers:format(club.online or 0,club.numMembers or 0);
+		ns.clubs("updateCounter",clubId);
+		local color,hexColor = ns.channelColor(clubId);
+		data = patternMembers:format(CGreen,club.numOnline or 0,hexColor,club.numMembers or 0);
 	end
 	if data then
 		(LDB:GetDataObjectByName(club.ldbName) or {})[field] = data;
@@ -272,9 +296,9 @@ function ns.Broker_UpdateDirty(flag)
 		if flag then
 			club.dirty = true;
 		elseif club.dirty then
-			local obj = (LDB:GetDataObjectByName(club.ldbName) or {});
-			obj.text = "CLUB_NOT_FOUND";
-			obj.icon = 134400;
+			ns.Broker_Update(clubId,"icon");
+			ns.Broker_Update(clubId,"text");
+			club.dirty = nil;
 		end
 	end
 end
