@@ -276,7 +276,9 @@ members = {
 
 		members.queue[clubId.."-"..memberId]=nil;
 
-		if msg then
+		if msg and ((CommunityInfoDB["Club-"..clubId].enableInOrExclude==1 and not CommunityInfoDB["Club-"..clubId]["member-"..memberId]) -- include
+			or (CommunityInfoDB["Club-"..clubId].enableInOrExclude==2 and CommunityInfoDB["Club-"..clubId]["member-"..memberId])) -- exclude
+		then
 			-- final message
 			AddChatMsg(club,memberInfo,msg);
 		end
