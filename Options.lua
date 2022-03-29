@@ -4,6 +4,7 @@ local L,C = ns.L,WrapTextInColorCode;
 local faction = UnitFactionGroup("player");
 local AC = LibStub("AceConfig-3.0");
 local ACD = LibStub("AceConfigDialog-3.0");
+local ACR = LibStub("AceConfigRegistry-3.0");
 local clubChatValues,generalDefaults,clubDefaults,options = {
 	["0"] = ADDON_DISABLED,
 	["1"] = GENERAL,
@@ -34,28 +35,31 @@ local function GetCommunityNameAndType(info)
 		ns.debug(key,clubKey , clubId , club);
 		return ""; -- failed
 	end
-	local clubType = C("("..(club.clubType==0 and COMMUNITIES_INVITATION_FRAME_TYPE or COMMUNITIES_INVITATION_FRAME_TYPE_CHARACTER)..")","ffaaaaaa");
+	local color, hex = ns.channelColor(club.clubId);
+	local clubType = C("("..(club.clubType==0 and COMMUNITIES_INVITATION_FRAME_TYPE or COMMUNITIES_INVITATION_FRAME_TYPE_CHARACTER)..")",hex); -- "ffaaaaaa"
 
 	if key=="clubtype" then
 		return clubType;
 	end
 
-	local color, hex = ns.channelColor(club.clubId);
-	--local icon = "|Tinterface\\friendsframe\\Battlenet-" .. (club.clubType==0 and "Battleneticon" or "WoWicon") .. ":16:16:0:-1:64:64:6:58:6:58|t ";
 	local factionIcon = club.clubType~=0 and " |TInterface\\PVPFrame\\PVP-Currency-"..faction..":16:16:-2:-1:16:16:0:16:0:16|t" or "";
-	local name = C(club.name,hex);
-	if key=="label" then
-		return factionIcon .. name;
+	local clubIcon = ns.clubs[clubId].iconId or "";
+	if clubIcon then
+		clubIcon = "|T"..clubIcon..":0|t ";
 	end
-	return factionIcon .. name -- .. "\n" .. clubType;
+	local clubName = C(club.name,hex);
+	if key=="label" then
+		return clubIcon .. clubName .. factionIcon;
+	end
+
+	return clubIcon .. clubName .. factionIcon; -- .. "\n" .. clubType;
 end
 
 local function addMembers(info)
 	if not info[#info] == "members" then return end
 	local clubKey = info[#info-2];
 	local clubId = tonumber(clubKey:match("(%d+)$"));
-	ns.debug("addMembers",clubKey,clubId);
-	local opt_members = options.args.communities.args[clubKey].args.include_exclude.args.members
+	local opt_members = options.args.communities.args[clubKey].args.notifications.args.members
 	wipe(opt_members.args);
 
 	local members = C_Club.GetClubMembers(clubId);
@@ -84,6 +88,15 @@ local function addMembers(info)
 		end
 	end
 	return "";
+end
+
+local function hideMembers(info)
+	if info[#info]~="members" then return false; end
+	local clubKey = info[#info-2];
+	if CommunityInfoDB[clubKey].enableInOrExclude == 0 then
+		return true;
+	end
+	return false;
 end
 
 local function opt(info,value,...)
@@ -135,7 +148,7 @@ options = {
 		addonloaded = {
 			type = "toggle", order = 1,
 			name = L["AddOnLoaded"], -- AddOn loaded...
-			desc = L["AddOnLoadedDesc"], -- Display 'AddOn loaded...' message on login
+			desc = L["AddOnLoadedDesc"], -- Display 'AddOn loaded...' message on login. Alternatively you can hold shift key on loading screen to display this message for this login only.
 		},
 		communities = {
 			type = "group", order = 4,
@@ -242,12 +255,33 @@ local comTpl = { -- community option table template
 	}
 }
 
+local function sortClubs(a,b)
+	return a[1]<b[1];
+end
+
+local function Ace3NotifyChange()
+	local index,tmp = 100,{};
+	for k,v in pairs(options.args.communities.args) do
+		if k~="NoCommunityFound" then
+			local name = v.name({k,"name"});
+			tinsert(tmp,{name:gsub("%|T[0-9]*:0%|t (.*) %|T.*%|t","%1"),v});
+		end
+	end
+	table.sort(tmp,sortClubs);
+	for k,v in pairs(tmp)do
+		v[2].order = index;
+		index = index + 1;
+	end
+	ACR:NotifyChange(addon..".communities");
+end
+
 function ns.Options_ResetCommunities()
 	for k in pairs(options.args.communities.args) do
 		if k:find("^Club%-%d+$") then
 			options.args.communities.args[k] = nil;
 		end
 	end
+	Ace3NotifyChange()
 end
 
 function ns.Options_AddCommunity(clubId)
@@ -275,6 +309,7 @@ function ns.Options_AddCommunity(clubId)
 			end
 		end
 	end
+	Ace3NotifyChange()
 end
 
 function ns.Options_Toggle()
