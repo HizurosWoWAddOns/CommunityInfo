@@ -216,7 +216,7 @@ local function broker_OnEnterClub(self,clubId)
 				memberInfo.level,
 				icon .. C(name or UNKNOWN,ns.class_color(memberInfo.classID)) .. realm,
 				C(raceInfo and raceInfo.raceName or "",CGray),
-				(memberInfo.zone or "")..hidden,
+				(info.zone or "")..hidden,
 				C(strCut(memberInfo.memberNote,18),CGray),
 				memberInfo.role and COMMUNITY_MEMBER_ROLE_NAMES[memberInfo.role] or ""
 			);
