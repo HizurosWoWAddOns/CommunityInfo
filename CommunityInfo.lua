@@ -351,9 +351,8 @@ clubs = {
 		return true;
 	end,
 
-	updateAll = function()
+	updateBroker = function()
 		ns.Broker_UpdateDirty(true);
-		ns.Options_ResetCommunities();
 		for _,club in ipairs(C_Club.GetSubscribedClubs()) do
 			if clubs.update(club) then
 				members.update(club.clubId);
@@ -430,7 +429,7 @@ events = {
 
 	PLAYER_LOGIN=function(...)
 		C_Timer.After(12, function()
-			clubs.updateAll();
+			clubs.updateBroker();
 			icons.update();
 			frame.PL=true;
 		end);

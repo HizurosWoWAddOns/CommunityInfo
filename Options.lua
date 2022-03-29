@@ -35,6 +35,11 @@ local function GetCommunityNameAndType(info)
 		ns.debug(key,clubKey , clubId , club);
 		return ""; -- failed
 	end
+
+	if key=="nameonly" then
+		return club.name;
+	end
+
 	local color, hex = ns.channelColor(club.clubId);
 	local clubType = C("("..(club.clubType==0 and COMMUNITIES_INVITATION_FRAME_TYPE or COMMUNITIES_INVITATION_FRAME_TYPE_CHARACTER)..")",hex); -- "ffaaaaaa"
 
@@ -263,8 +268,8 @@ local function Ace3NotifyChange()
 	local index,tmp = 100,{};
 	for k,v in pairs(options.args.communities.args) do
 		if k~="NoCommunityFound" then
-			local name = v.name({k,"name"});
-			tinsert(tmp,{name:gsub("%|T[0-9]*:0%|t (.*) %|T.*%|t","%1"),v});
+			local name = v.name({k,"nameonly"});
+			tinsert(tmp,{name,v});
 		end
 	end
 	table.sort(tmp,sortClubs);
@@ -272,16 +277,7 @@ local function Ace3NotifyChange()
 		v[2].order = index;
 		index = index + 1;
 	end
-	ACR:NotifyChange(addon..".communities");
-end
-
-function ns.Options_ResetCommunities()
-	for k in pairs(options.args.communities.args) do
-		if k:find("^Club%-%d+$") then
-			options.args.communities.args[k] = nil;
-		end
-	end
-	Ace3NotifyChange()
+	ACR:NotifyChange(addon);
 end
 
 function ns.Options_AddCommunity(clubId)
@@ -294,7 +290,6 @@ function ns.Options_AddCommunity(clubId)
 	-- add community to option panel
 	if not options.args.communities.args[clubKey] then
 		options.args.communities.args[clubKey] = CopyTable(comTpl);
-		options.args.communities.args[clubKey].order = 50;
 		options.args.communities.args.NoCommunityFound.hidden = true;
 	end
 
@@ -308,6 +303,13 @@ function ns.Options_AddCommunity(clubId)
 				CommunityInfoDB[clubKey][optKey] = (t=="table" and CopyTable(value)) or value;
 			end
 		end
+	end
+	Ace3NotifyChange()
+end
+
+function ns.Options_RemoveCommunity(clubId)
+	if options.args.communities.args["Club-"..clubId] then
+		options.args.communities.args["Club-"..clubId] = nil;
 	end
 	Ace3NotifyChange()
 end
