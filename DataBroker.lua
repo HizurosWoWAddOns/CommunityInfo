@@ -239,7 +239,15 @@ end
 local function broker_OnClickClub(self,button,clubId)
 	local club = ns.clubs[clubId];
 	if button=="LeftButton" then
+		-- open community window
+		local frame = CommunitiesFrame;
+		if frame and frame:IsShown() and frame.selectedClubId==clubId then
+			HideUIPanel(frame);
+		else
+			CommunitiesHyperlink.OnClickReference(clubId)
+		end
 	else
+		-- ?
 	end
 end
 
