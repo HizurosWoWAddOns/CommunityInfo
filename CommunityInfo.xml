@@ -2,6 +2,9 @@
 ..\FrameXML\UI.xsd">
 
 	<Script file="Localization.lua" />
+	<!--@do-not-package@-->
+	<Script file="Localization-workfile.lua" />
+	<!--@end-do-not-package@-->
 	<Script file="CommunityInfo.lua" />
 	<Script file="DataBroker.lua" />
 	<Script file="Options.lua" />
