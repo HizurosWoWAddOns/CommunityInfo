@@ -153,7 +153,7 @@ options = {
 		addonloaded = {
 			type = "toggle", order = 1,
 			name = L["AddOnLoaded"], -- AddOn loaded...
-			desc = L["AddOnLoadedDesc"], -- Display 'AddOn loaded...' message on login. Alternatively you can hold shift key on loading screen to display this message for this login only.
+			desc = L["AddOnLoadedDesc"].."|n|n|cff44ff44"..L["AddOnLoadedDescAlt"].."|r", -- Display 'AddOn loaded...' message on login. Alternatively you can hold shift key on loading screen to display this message for this login only.
 		},
 		communities = {
 			type = "group", order = 4,
