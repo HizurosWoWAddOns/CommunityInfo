@@ -123,33 +123,21 @@ do
 end
 
 local function broker_OnEnterClub(self,clubId)
-	local club,tt = ns.clubs[clubId];
-	local _,clubColor = ns.channelColor(clubId);
-	clubColor = clubColor or "ff888888";
 	local tt = GetTooltip(self,clubId);
-
 	if tt.lines~=nil then tt:Clear(); end
 
-	tt:SetCell(tt:AddLine(),1,C(club.name or "?",clubColor),tt:GetHeaderFont(),"LEFT",0);
+	local club = ns.clubs[clubId];
+	local _,clubColor = ns.channelColor(clubId);
+	clubColor = clubColor or "ff888888";
+
+	local clubIcon = "";
+	if club.iconId then
+		clubIcon = "|T"..club.iconId..":0|t ";
+	end
+
+	tt:SetCell(tt:AddLine(),1,clubIcon..C(club.name or "?",clubColor),tt:GetHeaderFont(),"LEFT",0);
 	tt:SetCell(tt:AddLine(),1,C(club.clubType==0 and COMMUNITIES_INVITATION_FRAME_TYPE or COMMUNITIES_INVITATION_FRAME_TYPE_CHARACTER,clubColor),"GameFontNormalSmall","LEFT",0);
 	tt:AddSeparator(4,0,0,0,0);
-
-	--[[
-	local failed,members = {},{};
-	for memberId,member in pairs(club.members) do
-		--local info = C_Club.GetMemberInfo(clubId,memberId);
-		if member and member.name and member.presence>0 then
-			tinsert(members,member);
-		else
-			tinsert(failed,memberId);
-		end
-	end
-
-
-	if #failed>0 then
-		ns.debug("<failed on getting member infos>",table.concat(failed,", "));
-	end
-	--]]
 
 	if CommunityInfoDB["Club-"..clubId]["motd"] and club.broadcast and club.broadcast:trim()~="" then
 		tt:SetCell(tt:AddLine(), 1, C(GUILD_MOTD_LABEL,CBlue),nil,"LEFT",0);
@@ -203,6 +191,9 @@ local function broker_OnEnterClub(self,clubId)
 
 			local raceInfo = C_CreatureInfo.GetRaceInfo(memberInfo.race);
 			local info = C_Club.GetMemberInfo(clubId,memberId);
+			-- Note: info vs memberInfo. presence variable can change without event from 1(on) to 3(off) because
+			-- BattleNet option "As Offline" has effect on both. BNet Lounge and WoW Community.
+			-- memberInfo come from event and hold presence=1 and info used for current zone.
 
 			if memberInfo.presence==2 and info.presence==1 then
 				memberInfo.presence=1
