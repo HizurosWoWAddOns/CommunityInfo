@@ -134,14 +134,12 @@ end
 local function membOpt(info,value)
 	local member = info[#info];
 	local clubKey = info[#info-3];
+	local memberInfo = C_Club.GetMemberInfo(tonumber((clubKey:gsub("^Club%-",""))),tonumber((member:gsub("^member%-",""))));
 	if value~=nil then
-		if value == false then
-			value = nil;
-		end
-		CommunityInfoDB[clubKey][member] = value;
+		CommunityInfoDB[clubKey][memberInfo.guid] = value or nil;
 		return;
 	end
-	return CommunityInfoDB[clubKey][member] or false;
+	return CommunityInfoDB[clubKey][memberInfo.guid] or false;
 end
 
 options = {

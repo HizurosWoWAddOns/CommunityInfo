@@ -206,10 +206,12 @@ members = {
 		ns.clubs[club.clubId].numOnline = 0;
 		ns.clubs[club.clubId].numMembers = #members;
 
+--@do-not-package@
 		if club.members==nil then
 		--	club.members={};
 			ns.print("<MembersUpdate>","<ERROR>",club.clubId);
 		end
+--@end-do-not-package@
 
 		--[[
 		Enum.ClubMemberPresence
@@ -276,8 +278,8 @@ members = {
 
 		members.queue[clubId.."-"..memberId]=nil;
 
-		if msg and ((CommunityInfoDB["Club-"..clubId].enableInOrExclude==1 and not CommunityInfoDB["Club-"..clubId]["member-"..memberId]) -- include
-			or (CommunityInfoDB["Club-"..clubId].enableInOrExclude==2 and CommunityInfoDB["Club-"..clubId]["member-"..memberId])) -- exclude
+		if msg and ((CommunityInfoDB["Club-"..clubId].enableInOrExclude==1 and not CommunityInfoDB["Club-"..clubId][memberInfo.guid]) -- include
+			or (CommunityInfoDB["Club-"..clubId].enableInOrExclude==2 and CommunityInfoDB["Club-"..clubId][memberInfo.guid])) -- exclude
 		then
 			-- final message
 			AddChatMsg(club,memberInfo,msg);
@@ -345,6 +347,21 @@ clubs = {
 					ns.clubs[club.clubId].hasChanged = true; -- for later use in option panel?
 				end
 				ns.clubs[club.clubId][k] = v;
+			end
+		end
+
+		-- migration from memberId to player guid; more reliable if player leave and rejoin community
+		if CommunityInfoDB["Club-"..club.clubId] then
+			local memberInfo, memberId
+			for k,v in pairs(CommunityInfoDB["Club-"..club.clubId])do
+				memberId = tonumber((k:gsub("^member%-","")));
+				if memberId then
+					memberInfo = C_Club.GetMemberInfo(club.clubId,memberId)
+				end
+				if memberInfo then
+					CommunityInfoDB["Club-"..club.clubId][memberInfo.guid] = v;
+					CommunityInfoDB["Club-"..club.clubId][k] = nil;
+				end
 			end
 		end
 
