@@ -287,7 +287,7 @@ members = {
 	end,
 
 	add = function(clubId,memberId)
-		if not ns.club[clubId] then return end
+		if not ns.clubs[clubId] then return end
 		local club = ns.clubs[clubId];
 		local memberInfo = C_Club.GetMemberInfo(clubId,memberId);
 		if memberInfo then
@@ -299,7 +299,7 @@ members = {
 	end,
 
 	remove = function(clubId,memberId)
-		if not ns.club[clubId] then return end
+		if not ns.clubs[clubId] then return end
 		local club = ns.clubs[clubId];
 		local memberInfo = club.members[memberId];
 		if memberInfo then
