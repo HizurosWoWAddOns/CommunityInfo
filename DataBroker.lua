@@ -106,7 +106,11 @@ local function scm(str,all,str2) -- screen capture mode
 		res = table.concat(res,"\n");
 
 		if all~=true then
-			res = strsub(str,1,1) .. strsub(res,2,res:len());
+			local s = strsub(str,1,1);
+			if s=="\195" then
+				s = strsub(str,1,2); -- utf8 special characters
+			end
+			res = s .. strsub(res,2,res:len());
 		end
 
 		--str = all and str2:rep(length) or strsub(str,1,1)..str2:rep(length-1);
