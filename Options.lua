@@ -11,6 +11,7 @@ local clubChatValues,generalDefaults,clubDefaults,options = {
 	["2"] = L["SelectedChatWindow"] -- Into same chat window like community chat messages
 },{ -- generalDefaults
 	addonloaded=true,
+	screencapturemode=false,
 },{ -- clubDefaults
 	minimap = {hide=true},
 	msgTarget = "1",
@@ -153,8 +154,14 @@ options = {
 			name = L["AddOnLoaded"], -- AddOn loaded...
 			desc = L["AddOnLoadedDesc"].."|n|n|cff44ff44"..L["AddOnLoadedDescAlt"].."|r", -- Display 'AddOn loaded...' message on login. Alternatively you can hold shift key on loading screen to display this message for this login only.
 		},
+
+		screencapturemode = {
+			type  = "toggle", order = 2,
+			name  = L["SCM"], desc = L["SCMDesc"]
+		},
+
 		communities = {
-			type = "group", order = 4,
+			type = "group", order = 100,
 			childGroups = "tree",
 			name = COMMUNITIES,
 			get = comOpt, set = comOpt,

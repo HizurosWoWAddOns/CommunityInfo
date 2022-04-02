@@ -60,6 +60,8 @@ end
 local function strWrap(text, limit, insetCount, insetChr, insetLastChr)
 	if not text then
 		return "";
+	elseif text:len()<=limit then
+		return text;
 	end
 	if text:match("\n") or text:match("%|n") then
 		local txt = text:gsub("%|n","\n");
@@ -68,9 +70,6 @@ local function strWrap(text, limit, insetCount, insetChr, insetLastChr)
 			tinsert(tmp,strWrap(strings[i], limit, insetCount, insetChr, insetLastChr));
 		end
 		return table.concat(tmp,"\n");
-	end
-	if text:len()<=limit then
-		return text;
 	end
 	local tmp,result,inset = "",{},"";
 	if type(insetCount)=="number" then
@@ -88,7 +87,32 @@ local function strWrap(text, limit, insetCount, insetChr, insetLastChr)
 	if tmp~="" then
 		tinsert(result,tmp);
 	end
-	return table.concat(result,"|n"..inset)
+	return table.concat(result,"\n"..inset)
+end
+
+local function scm(str,all,str2) -- screen capture mode
+	if str==nil then return "" end
+	str2,str = (str2 or "*"),tostring(str);
+	local length = str:len();
+	if length>0 and CommunityInfoDB.screencapturemode==true then
+		local res = {strsplit("\n",str)};
+		for i,v in ipairs(res)do
+			v = {strsplit(" ",v)};
+			for I,V in ipairs(v)do
+				v[I] = str2:rep(V:len());
+			end
+			res[i] = table.concat(v," ");
+		end
+		res = table.concat(res,"\n");
+
+		if all~=true then
+			res = strsub(str,1,1) .. strsub(res,2,res:len());
+		end
+
+		--str = all and str2:rep(length) or strsub(str,1,1)..str2:rep(length-1);
+		str = res;
+	end
+	return str;
 end
 
 local function memberInviteOrWhisperToon(self,info,button)
@@ -142,14 +166,14 @@ local function broker_OnEnterClub(self,clubId)
 	if CommunityInfoDB["Club-"..clubId]["motd"] and club.broadcast and club.broadcast:trim()~="" then
 		tt:SetCell(tt:AddLine(), 1, C(GUILD_MOTD_LABEL,CBlue),nil,"LEFT",0);
 		tt:AddSeparator();
-		tt:SetCell(tt:AddLine(), 1, C(strWrap(club.broadcast,80),CYellow), nil, "LEFT", 0);
+		tt:SetCell(tt:AddLine(), 1, C(scm(strWrap(club.broadcast,80)),CYellow), nil, "LEFT", 0);
 		tt:AddSeparator(4,0,0,0,0);
 	end
 
 	if CommunityInfoDB["Club-"..clubId]["desc"] and club.description and club.description:trim()~="" then
 		tt:SetCell(tt:AddLine(), 1, C(DESCRIPTION,CBlue),nil,"LEFT",0);
 		tt:AddSeparator();
-		tt:SetCell(tt:AddLine(), 1, C(strWrap(club.description,80),CYellow), nil, "LEFT", 0);
+		tt:SetCell(tt:AddLine(), 1, C(scm(strWrap(club.description,80)),CYellow), nil, "LEFT", 0);
 		tt:AddSeparator(4,0,0,0,0);
 	end
 
@@ -179,10 +203,10 @@ local function broker_OnEnterClub(self,clubId)
 		elseif club.clubType==0 then
 			tt:AddLine(
 				--memberInfo.level,
-				C(memberInfo.name or UNKNOWN,clubColor),
+				C(scm(memberInfo.name or UNKNOWN),clubColor),
 				--memberInfo.race,
 				--memberInfo.zone or "",
-				C(strCut(memberInfo.memberNote,18),CGray),
+				C(scm(strCut(memberInfo.memberNote,18)),CGray),
 				memberInfo.role and COMMUNITY_MEMBER_ROLE_NAMES[memberInfo.role] or ""
 			);
 		else
@@ -214,10 +238,10 @@ local function broker_OnEnterClub(self,clubId)
 
 			local l = tt:AddLine(
 				memberInfo.level,
-				icon .. C(name or UNKNOWN,ns.class_color(memberInfo.classID)) .. realm,
+				icon .. C(scm(name or UNKNOWN),ns.class_color(memberInfo.classID)) .. realm,
 				C(raceInfo and raceInfo.raceName or "",CGray),
 				(info.zone or "")..hidden,
-				C(strCut(memberInfo.memberNote,18),CGray),
+				C(scm(strCut(memberInfo.memberNote,18)),CGray),
 				memberInfo.role and COMMUNITY_MEMBER_ROLE_NAMES[memberInfo.role] or ""
 			);
 			if memberInfo.isSelf then
