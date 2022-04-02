@@ -293,7 +293,7 @@ members = {
 		if memberInfo then
 			club.members[memberId] = memberInfo;
 			ns.intIncrease(club,"numMembers");
-			AddChatMsg(clubId,memberInfo,L["NotifyJoined"..(club.clubType==0 and "Lounge" or "Community")]);
+			AddChatMsg(club,memberInfo,L["NotifyJoined"..(club.clubType==0 and "Lounge" or "Community")]);
 			ns.Broker_Update(clubId,"text");
 		end
 	end,
@@ -303,7 +303,7 @@ members = {
 		local club = ns.clubs[clubId];
 		local memberInfo = club.members[memberId];
 		if memberInfo then
-			AddChatMsg(clubId,memberInfo,L["NotifyLeaved"..club.clubType==0 and "Lounge" or "Community"]);
+			AddChatMsg(club,memberInfo,L["NotifyLeaved"..club.clubType==0 and "Lounge" or "Community"]);
 			club.members[memberId] = nil;
 			ns.intDecrease(club,"numMembers");
 			ns.Broker_Update(clubId,"text");
