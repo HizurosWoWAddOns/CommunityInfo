@@ -479,3 +479,12 @@ for event in pairs(events)do
 	frame:RegisterEvent(event);
 end
 
+
+--== Slash command ==--
+
+SlashCmdList.COMMUNITYINFO = function(cmd)
+	ns.Options_Toggle()
+end
+
+SLASH_COMMUNITYINFO1 = "/ci"
+SLASH_COMMUNITYINFO2 = "/communityinfo"
