@@ -350,21 +350,6 @@ clubs = {
 			end
 		end
 
-		-- migration from memberId to player guid; more reliable if player leave and rejoin community
-		if CommunityInfoDB["Club-"..club.clubId] then
-			local memberInfo, memberId
-			for k,v in pairs(CommunityInfoDB["Club-"..club.clubId])do
-				memberId = tonumber((k:gsub("^member%-","")));
-				if memberId then
-					memberInfo = C_Club.GetMemberInfo(club.clubId,memberId)
-				end
-				if memberInfo then
-					CommunityInfoDB["Club-"..club.clubId][memberInfo.guid] = v;
-					CommunityInfoDB["Club-"..club.clubId][k] = nil;
-				end
-			end
-		end
-
 		return true;
 	end,
 
