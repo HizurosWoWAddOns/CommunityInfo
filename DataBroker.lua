@@ -131,7 +131,10 @@ end
 local pairsByField
 do
 	local function sortField(a,b)
-		return a[2]<b[2];
+		if a[2] and b[2] then
+			return a[2]<b[2];
+		end
+		return false;
 	end
 
 	function pairsByField(t,field)

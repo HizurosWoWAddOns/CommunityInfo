@@ -139,25 +139,19 @@ local function AddChatMsg(club,member,msg)
 
 	-- target channel
 	local clubMsgTarget = CommunityInfoDB["Club-"..club.clubId]["msgTarget"];
-	local clubMsgTargetChannel = CommunityInfoDB["Club-"..club.clubId]["msgTargetChannel"] or false;
 	if clubMsgTarget=="1" then
 		-- default chat frame
 		DEFAULT_CHAT_FRAME:AddMessage(msg,color.r,color.g,color.b);
-	elseif clubMsgTarget=="2" and clubMsgTargetChannel then
+	elseif clubMsgTarget=="2" then
+		local channelName = Chat_GetCommunitiesChannelName(club.clubId, 1);
 		for i=1, FCF_GetNumActiveChatFrames() do
-			local chatFrame,add = _G['ChatFrame'..i],false;
-			if chatFrame~=COMBATLOG then
-				for c=1, #chatFrame.channelList do
-					if chatFrame.channelList[c]==clubMsgTargetChannel then
-						add = true;
-						break;
-					end
-				end
-				if add then
-					chatFrame:AddMessage(msg,color.r,color.g,color.b);
-				end
+			local chatFrame = _G['ChatFrame'..i];
+			if chatFrame~=COMBATLOG and ChatFrame_ContainsChannel(chatFrame,channelName) then
+				chatFrame:AddMessage(msg,color.r,color.g,color.b);
 			end
 		end
+	--elseif clubMsgTarget=="3" then
+		--local clubMsgTargetChannel = CommunityInfoDB["Club-"..club.clubId]["msgTargetChannel"] or false;
 	end
 end
 
@@ -271,8 +265,15 @@ members = {
 
 		members.queue[clubId.."-"..memberId]=nil;
 
-		if msg and not ((CommunityInfoDB["Club-"..clubId].enableInOrExclude==1 and CommunityInfoDB["Club-"..clubId][memberInfo.guid]) -- include
-			or (CommunityInfoDB["Club-"..clubId].enableInOrExclude==2 and not CommunityInfoDB["Club-"..clubId][memberInfo.guid])) -- exclude
+		local filterEnabled = CommunityInfoDB["Club-"..clubId].enableInOrExclude;
+		local filterGUID = CommunityInfoDB["Club-"..clubId][memberInfo.guid] or false;
+
+
+		if msg and (
+				filterEnabled==0 -- filter disabled
+				or (filterEnabled==1 and filterGUID) -- include
+				or (filterEnabled==2 and not filterGUID) -- exclude
+			)
 		then
 			-- final message
 			AddChatMsg(club,memberInfo,msg);
