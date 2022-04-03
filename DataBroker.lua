@@ -7,7 +7,7 @@ local LDBI = LibStub("LibDBIcon-1.0");
 local LQT = LibStub("LibQTip-1.0");
 
 local C = WrapTextInColorCode;
-local CYellow,CYellowLight,CGreen,CBNet,CBlue,CGray = "ffffcc00","fffff569","ff00ff00","ff82c5ff","ff00aaff","ffaaaaaa";
+local CYellow,CYellowLight,CGreen,CBNet,CBlue,CGray,CCopper = "ffffcc00","fffff569","ff00ff00","ff82c5ff","ff00aaff","ffaaaaaa","fff0a55f";
 local broker,patternMembers,broker_OnLeave = {},"|C%s%s|C%s/%s|r";
 
 local COMMUNITY_MEMBER_ROLE_NAMES = {
@@ -258,7 +258,8 @@ local function broker_OnEnterClub(self,clubId)
 
 	if club.clubType==1 then
 		tt:AddSeparator(4,0,0,0,0);
-		tt:SetCell(tt:AddLine(),1,C(L["MouseBtn"],CBlue).." || "..C(WHISPER,CGreen) .." - ".. C(L["ModKeyA"].."+"..L["MouseBtn"],CBlue).." || "..C(TRAVEL_PASS_INVITE,CGreen),nil,"LEFT",0);
+		tt:SetCell(tt:AddLine(),1,L["TooltipActionOnMember"] ..HEADER_COLON.." ".. C(L["MouseBtn"],CBlue).." || "..C(WHISPER,CGreen)   .." - ".. C(L["ModKeyA"].."+"..L["MouseBtn"],CBlue).." || "..C(TRAVEL_PASS_INVITE,CGreen),nil,"LEFT",0);
+		tt:SetCell(tt:AddLine(),1,L["TooltipActionOnBroker"] ..HEADER_COLON.." ".. C(L["MouseBtn"],CCopper).." || "..C(L["OpenCommunity"],CGreen) .." - ".. C(L["ModKeyA"].."+"..L["MouseBtn"],CCopper).." || "..C(OPTIONS,CGreen),nil,"LEFT",0);
 	end
 
 	tt:Show();
@@ -275,7 +276,7 @@ local function broker_OnClickClub(self,button,clubId)
 			CommunitiesHyperlink.OnClickReference(clubId)
 		end
 	else
-		-- ?
+		ns.Options_Toggle(clubId)
 	end
 end
 

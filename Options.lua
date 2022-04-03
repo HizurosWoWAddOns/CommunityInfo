@@ -87,10 +87,6 @@ local function addMembers(info)
 				type = "toggle", order = info.classID,
 				name = _name
 			}
---@do-not-package@
-		else
-			ns.debug("no info for memberId",clubId,memberId);
---@end-do-not-package@
 		end
 	end
 	return "";
@@ -319,7 +315,13 @@ function ns.Options_RemoveCommunity(clubId)
 	Ace3NotifyChange()
 end
 
-function ns.Options_Toggle()
+function ns.Options_Toggle(clubId)
+	if ACD.OpenFrames[addon]~=nil then
+		ACD:Close(addon);
+	else
+		ACD:Open(addon);
+		ACD.OpenFrames[addon]:SetStatusText(GAME_VERSION_LABEL..CHAT_HEADER_SUFFIX.."@project-version@");
+	end
 end
 
 function ns.Options_Register()

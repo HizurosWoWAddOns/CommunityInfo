@@ -206,13 +206,6 @@ members = {
 		ns.clubs[club.clubId].numOnline = 0;
 		ns.clubs[club.clubId].numMembers = #members;
 
---@do-not-package@
-		if club.members==nil then
-		--	club.members={};
-			ns.print("<MembersUpdate>","<ERROR>",club.clubId);
-		end
---@end-do-not-package@
-
 		--[[
 		Enum.ClubMemberPresence
 			0 	Unknown
