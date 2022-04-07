@@ -19,6 +19,7 @@ local clubChatValues,generalDefaults,clubDefaults,options = {
 	notes = true,
 	motd = true,
 	desc = true,
+	onlineSound = false,
 	enableInOrExclude = 0,
 }
 
@@ -221,7 +222,10 @@ local comTpl = { -- community option table template
 					name = LABEL_NOTE,
 					desc = L["NoteDesc"] -- Display member notes on notifigations
 				},
-
+				onlineSound = {
+					type = "toggle", order = 3,
+					name = L["OnlineSound"], desc = L["OnlineSoundDesc"]
+				},
 				-- notification in channel color as option?
 				--[[
 				color_header = {
@@ -232,21 +236,21 @@ local comTpl = { -- community option table template
 				]]
 
 				filter_header = {
-					type = "header", order = 3,
+					type = "header", order = 30,
 					name = FILTER
 				},
 
 				enableInOrExclude = {
-					type = "select", order = 4, width = "full",
+					type = "select", order = 31, width = "full",
 					name = "", --"In- or exclude",
 					values = {
-						[0] = L["NotificationFilter0"],
-						[1] = L["NotificationFilter1"],
-						[2] = L["NotificationFilter2"]
+						[0] = L["NotificationFilter0"], -- disabled
+						[1] = L["NotificationFilter1"], -- include
+						[2] = L["NotificationFilter2"] -- exclude
 					}
 				},
 				members = {
-					type = "group", order = 5, inline = true,
+					type = "group", order = 32, inline = true,
 					name = addMembers,
 					hidden = hideMembers,
 					get = membOpt,

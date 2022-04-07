@@ -153,6 +153,10 @@ local function AddChatMsg(club,member,msg)
 	--elseif clubMsgTarget=="3" then
 		--local clubMsgTargetChannel = CommunityInfoDB["Club-"..club.clubId]["msgTargetChannel"] or false;
 	end
+
+	if member.presence==1 and CommunityInfoDB["Club-"..club.clubId]["onlineSound"] then
+		PlaySoundFile(567518,"SFX"); -- sound/interface/friendjoin.ogg
+	end
 end
 
 icons = {
