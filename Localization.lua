@@ -11,7 +11,6 @@ ns.L = setmetatable(L,{
 
 -- Do you want to help localizations? https://wow.curseforge.com/projects/communityinfo/localization
 
-
 --@localization(locale="enUS", format="lua_additive_table", handle-subnamespaces="none", handle-unlocalized="ignore")@
 
 if LOCALE_deDE then
