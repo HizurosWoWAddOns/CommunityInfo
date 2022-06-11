@@ -1,0 +1,30 @@
+name: packager
+on:
+  push:
+    tags:
+      - '*-(release|beta)[0-9]*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      CF_API_KEY: ${{ secrets.CF_API_KEY }}
+      WOWI_API_TOKEN: ${{ secrets.WOWI_API_TOKEN }}
+      WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+      GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+      # setup under repo > settings > secrets
+
+    steps:
+      - name: Clone project
+        uses: actions/checkout@main
+
+      - name: Add shared file
+        uses: actions/checkout@main
+          repository: HizurosWoWAddOns/.github
+          path: ./shared
+          #run: |
+          #  rm -R README.md profile .github >/dev/null
+
+      - name: Package and release
+        uses: BigWigsMods/packager@v2
+
