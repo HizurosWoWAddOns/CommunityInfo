@@ -20,6 +20,7 @@ jobs:
 
       - name: Add shared file
         uses: actions/checkout@main
+        with:
           repository: HizurosWoWAddOns/.github
           path: ./shared
           #run: |
