@@ -51,4 +51,6 @@ ignore:
     - libs/HizurosSharedTools/README.md
     - README.md
     - libs/LibDropDownMenu/README.md
+    - libs/HizurosSharedTools/profile
+    - libs/HizurosSharedTools/README.md
 
