@@ -1,0 +1,3 @@
+[submodule "HizurosSharedTools"]
+    path = .
+    url = https://github.com/HizurosWoWAddOns/.github
