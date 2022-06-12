@@ -169,6 +169,12 @@ options = {
 				}
 			}
 		},
+
+		credits = {
+			type = "group", order = 200,
+			name = L["Credits"],
+			args = {}
+		}
 	}
 };
 
@@ -350,4 +356,6 @@ function ns.Options_Register()
 	end
 	AC:RegisterOptionsTable(addon, options);
 	ACD:AddToBlizOptions(addon);
+
+	ns.AddCredits(options.args.credits.args);
 end
