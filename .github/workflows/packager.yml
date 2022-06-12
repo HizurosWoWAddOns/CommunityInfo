@@ -2,7 +2,7 @@ name: packager
 on:
   push:
     tags:
-      - '*-(release|beta)[0-9]*'
+      - '*-release[0-9]*'
 
 jobs:
   release:
