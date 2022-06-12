@@ -18,14 +18,6 @@ jobs:
       - name: Clone project
         uses: actions/checkout@main
 
-      - name: Add shared file
-        uses: actions/checkout@main
-        with:
-          repository: HizurosWoWAddOns/.github
-          path: ./shared
-          #run: |
-          #  rm -R README.md profile .github >/dev/null
-
       - name: Package and release only on github
         uses: BigWigsMods/packager@v2
 
