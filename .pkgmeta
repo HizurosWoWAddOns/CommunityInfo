@@ -47,5 +47,8 @@ ignore:
     - libs/CallbackHandler-1.0/CallbackHandler-1.0.xml
     - libs/LibDataBroker-1.0/README.textile
     - libs/LibDBIcon-1.0/lib.xml
+    - libs/HizurosSharedTools/profile
+    - libs/HizurosSharedTools/README.md
+    - README.md
+    - libs/LibDropDownMenu/README.md
 
-license-output: LICENSE.txt
