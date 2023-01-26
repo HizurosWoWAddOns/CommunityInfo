@@ -375,22 +375,14 @@ frame:SetScript("OnEvent",function(self,event,...)
 end);
 
 events = {
-	VARIABLES_LOADED=function(...)
-		frame.icon = frame:CreateTexture(); -- for avatarId to iconId
-		ns.Options_Register();
---@do-not-package@
-		if not C_ChatInfo.RegisterAddonMessagePrefix(msgPrefix) then
-			ns.debug("<RegisterAddonMessagePrefix>","failed");
-		end
-		--ns.RegisterCommunityMotDAlertSystem();
---@end-do-not-package@
-		if CommunityInfoDB.addonloaded or IsShiftKeyDown() then
-			ns.print(L["AddOnLoaded"]);
-		end
-	end,
-
 	ADDON_LOADED=function(addonName)
-		if addonName=="Blizzard_Communities" then
+		if addon==addonName then
+			frame.icon = frame:CreateTexture(); -- for avatarId to iconId
+			ns.Options_Register();
+			if CommunityInfoDB.addonloaded or IsShiftKeyDown() then
+				ns:print(L["AddOnLoaded"]);
+			end
+		elseif addonName=="Blizzard_Communities" then
 			CommunitiesFrame:HookScript("OnShow",function() notificationLock.set(); end);
 			CommunitiesFrame:HookScript("OnHide",function()
 				for clubId in pairs(ns.clubs) do
@@ -398,7 +390,6 @@ events = {
 					C_Club.SetClubPresenceSubscription(clubId);
 				end
 			end);
-			frame:UnregisterEvent("ADDON_LOADED");
 		end
 	end,
 

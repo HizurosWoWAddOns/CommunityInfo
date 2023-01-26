@@ -34,7 +34,6 @@ local function GetCommunityNameAndType(info)
 		end
 	end
 	if not (clubKey and clubId and club) then
-		ns.debug(key,clubKey , clubId , club);
 		return ""; -- failed
 	end
 
@@ -169,12 +168,6 @@ options = {
 				}
 			}
 		},
-
-		credits = {
-			type = "group", order = 200,
-			name = L["Credits"],
-			args = {}
-		}
 	}
 };
 
@@ -355,7 +348,7 @@ function ns.Options_Register()
 		end
 	end
 	AC:RegisterOptionsTable(addon, options);
-	ACD:AddToBlizOptions(addon);
-
-	ns.AddCredits(options.args.credits.args);
+	local opts = ACD:AddToBlizOptions(addon);
+	LibStub("HizurosSharedTools").BlizzOptions_ExpandOnShow(opts);
+	LibStub("HizurosSharedTools").AddCredit(addon);
 end
