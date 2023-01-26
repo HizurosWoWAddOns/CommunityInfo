@@ -36,7 +36,7 @@ externals:
         tag: latest
 
     libs/HizurosSharedTools:
-        url: https://github.com/HizurosWoWAddOns/.github
+        url: https://github.com/HizurosWoWAddOns/HizurosSharedTools.git
 
 
 enable-nolib-creation: no
@@ -47,10 +47,8 @@ ignore:
     - libs/CallbackHandler-1.0/CallbackHandler-1.0.xml
     - libs/LibDataBroker-1.0/README.textile
     - libs/LibDBIcon-1.0/lib.xml
-    - libs/HizurosSharedTools/profile
     - libs/HizurosSharedTools/README.md
     - README.md
     - libs/LibDropDownMenu/README.md
-    - libs/HizurosSharedTools/profile
     - libs/HizurosSharedTools/README.md
 

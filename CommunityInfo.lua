@@ -1,7 +1,8 @@
 
 local addon, ns = ...;
 local L = ns.L;
-ns.addon_short = "CI";
+ns.debugMode = "@project-version@"=="@".."project-version".."@";
+LibStub("HizurosSharedTools").RegisterPrint(ns,addon,"CI");
 
 local icons,members,clubs,notificationLock,frame
 local clubChkChangedKeys,isMyID = {},{};
@@ -369,7 +370,6 @@ local events
 
 frame:SetScript("OnEvent",function(self,event,...)
 	if events[event] then
-		--ns.print("<Testing>","<event>",event,...);
 		events[event](...)
 	end
 end);
@@ -434,18 +434,6 @@ events = {
 	CLUB_MEMBER_REMOVED=function(clubId,memberId)
 		members.remove(clubId,memberId);
 	end,
-
-	--[[
-	CHANNEL_UI_UPDATE=function(...)
-	end,
-
-	CHAT_MSG_ADDON=function(...)
-		if msgPrefix==... then
-			ns.debug("<ChatMsgAddOn>",...);
-		end
-	end,
-	]]
-
 };
 
 for event in pairs(events)do
