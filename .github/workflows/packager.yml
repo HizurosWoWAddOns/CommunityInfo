@@ -3,6 +3,7 @@ on:
   push:
     tags:
       - '*-release[0-9]*'
+      - '*-release'
 
 jobs:
   release:
