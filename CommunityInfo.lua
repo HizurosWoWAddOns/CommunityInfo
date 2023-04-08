@@ -21,9 +21,11 @@ local msgPrefix,presenceMsg = addon,{
 	[4] = onlineMsg.." (AFK)",--CHAT_AFK_GET:gsub("%%s",""):gsub(HEADER_COLON,""):trim(),
 	[5] = onlineMsg.." (DND)",--CHAT_DND_GET:gsub("%%s",""):gsub(HEADER_COLON,""):trim()
 };
-local validClubTypes = {
-	--[0] = true, -- bnet lounge
+ns.validClubTypes = {
+	[0] = true, -- bnet lounge
 	[1] = true, -- wow community
+	[2] = false, -- guild
+	[3] = false, -- other?
 }
 
 function ns.intIncrease(t,k,v)
@@ -81,8 +83,12 @@ function ns.channelColor(clubId)
 end
 
 local function AddChatMsg(club,member,msg)
-	-- player color
-	local nameColor = "|c"..(club.clubType==0 and "ff00ffff" or ns.class_color(member.classID));
+	-- player and channel colors
+	local color, nameColor = ns.channelColor(club.clubId);
+	if club.clubType==1 and member.classID then
+		nameColor = ns.class_color(member.classID)
+	end
+	nameColor = "|c"..nameColor
 
 	-- player name/link
 	local name = nameColor..(member.name or UNKNOWN).."|r";
@@ -100,9 +106,6 @@ local function AddChatMsg(club,member,msg)
 	if CommunityInfoDB["Club-"..club.clubId]["notes"] and member and member.memberNote and member.memberNote~="" then
 		note = " |cffaaaaaa["..member.memberNote:trim().."]|r";
 	end
-
-	-- channel color
-	local color = ns.channelColor(club.clubId);
 
 	-- club name
 	local clubName = club.name or UNKNOWN;
@@ -298,7 +301,7 @@ clubs = {
 			3 Other?
 		--]]
 
-		if not (type(club)=="table" and club.clubId and (club.clubType==1 --[[ or club.clubType==0 ]])) then
+		if not (type(club)=="table" and club.clubId and ns.validClubTypes[club.clubType]) then
 			return false;
 		end
 

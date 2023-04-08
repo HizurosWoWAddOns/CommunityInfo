@@ -24,9 +24,12 @@ local function MouseIsOver(region, topOffset, bottomOffset, leftOffset, rightOff
 end
 
 local function GetTooltip(parent,clubId)
-	local club,ttColumns,ttAlign = ns.clubs[clubId],6,{"RIGHT", "LEFT", "LEFT", "LEFT","LEFT","LEFT"};
-	if club.clubType==0 then
-		ttColumns, ttAlign = 4, {"LEFT", "RIGHT", "LEFT", "LEFT","LEFT","LEFT"};
+	local club,ttColumns,ttAlign = ns.clubs[clubId],1,{"LEFT"}
+
+	if club.clubType==0 then -- Blizzard Lounge
+		ttColumns, ttAlign = 3, {"LEFT", "LEFT", "LEFT"};
+	elseif club.clubType==1 then -- WoW Community
+		ttColumns, ttAlign = 6, {"RIGHT", "LEFT", "LEFT", "LEFT","LEFT","LEFT"};
 	end
 
 	local tooltip = LQT:Acquire(club.key,  ttColumns, unpack(ttAlign));
@@ -186,14 +189,11 @@ local function broker_OnEnterClub(self,clubId)
 
 	if club.clubType==0 then
 		tt:AddLine(
-			--LEVEL,
 			C(NAME,CYellowLight),
-			--RACE,
-			--ZONE,
 			C(LABEL_NOTE,CYellowLight),
 			C(RANK,CYellowLight)
 		);
-	else
+	elseif club.clubType==1 then
 		tt:AddLine(
 			C(LEVEL,CYellowLight),
 			C(NAME,CYellowLight),
@@ -209,14 +209,11 @@ local function broker_OnEnterClub(self,clubId)
 			-- ignore offline
 		elseif club.clubType==0 then
 			tt:AddLine(
-				--memberInfo.level,
 				C(scm(memberInfo.name or UNKNOWN),clubColor),
-				--memberInfo.race,
-				--memberInfo.zone or "",
 				C(scm(strCut(memberInfo.memberNote,18)),CGray),
 				memberInfo.role and COMMUNITY_MEMBER_ROLE_NAMES[memberInfo.role] or ""
 			);
-		else
+		elseif club.clubType==1 then
 			local name,realm = strsplit("-",memberInfo.name,2);
 			realm = realm and C(" - "..realm,CYellow) or "";
 

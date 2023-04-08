@@ -8,7 +8,8 @@ local ACR = LibStub("AceConfigRegistry-3.0");
 local clubChatValues,generalDefaults,clubDefaults,options = {
 	["0"] = ADDON_DISABLED,
 	["1"] = GENERAL,
-	["2"] = L["SelectedChatWindow"] -- Into same chat window like community chat messages
+	["2"] = L["SelectedChatWindow"], -- Into same chat window like community chat messages
+	--["3"] = L["CustomChatWindow"] -- Self select window
 },{ -- generalDefaults
 	addonloaded=true,
 	screencapturemode=false,
@@ -23,19 +24,26 @@ local clubChatValues,generalDefaults,clubDefaults,options = {
 	enableInOrExclude = 0,
 }
 
-local function GetCommunityNameAndType(info)
-	local key,clubKey,clubId,club,name = info[#info];
+local function GetClubID(info)
+	local clubKey,clubId
 	for i=0, 4 do
 		if info[#info-i] and info[#info-i]:find("^Club%-") then
 			clubId = tonumber(info[#info-i]:match("^Club%-(%d+)")) or 0;
-			club = ns.clubs[clubId];
 			clubKey = info[#info-i];
 			break;
 		end
 	end
-	if not (clubKey and clubId and club) then
+	return clubKey,clubId
+end
+
+local function GetCommunityNameAndType(info)
+	local key = info[#info];
+	local clubKey,clubId = GetClubID(info)
+	if not (clubKey and clubId) then
 		return ""; -- failed
 	end
+
+	local club = ns.clubs[clubId];
 
 	if key=="nameonly" then
 		return club.name;
@@ -48,7 +56,7 @@ local function GetCommunityNameAndType(info)
 		return clubType;
 	end
 
-	local factionIcon = club.clubType~=0 and " |TInterface\\PVPFrame\\PVP-Currency-"..faction..":16:16:-2:-1:16:16:0:16:0:16|t" or "";
+	local factionIcon = (club.clubType==1 or club.clubType==2) and " |TInterface\\PVPFrame\\PVP-Currency-"..faction..":16:16:-2:-1:16:16:0:16:0:16|t" or "";
 	local clubIcon = ns.clubs[clubId].iconId or "";
 	if clubIcon then
 		clubIcon = "|T"..clubIcon..":0|t ";
@@ -72,21 +80,29 @@ local function addMembers(info)
 	for _,memberId in ipairs(members) do
 		local info = C_Club.GetMemberInfo(clubId,memberId);
 		if info and info.name and info.guid and info.isSelf==false then
-			local id = "member-"..memberId;
-			local classInfo = C_CreatureInfo.GetClassInfo(info.classID);
-			local name, realm = strsplit("-",info.name);
-			local color = (CUSTOM_CLASS_COLORS or RAID_CLASS_COLORS)[classInfo.classFile];
-			local _name = name;
-			if color then
-				_name = color:WrapTextInColorCode(name);
+			if ns.clubs[clubId].clubType==1 then
+				local id = "member-"..memberId;
+				local classInfo = C_CreatureInfo.GetClassInfo(info.classID);
+				local name, realm = strsplit("-",info.name);
+				local color = (CUSTOM_CLASS_COLORS or RAID_CLASS_COLORS)[classInfo.classFile];
+				local _name = name;
+				if color then
+					_name = color:WrapTextInColorCode(name);
+				end
+				if realm then
+					_name = _name .. C(" - "..realm,"ff888888");
+				end
+				opt_members.args[id] = {
+					type = "toggle", order = info.classID,
+					name = _name
+				}
+			elseif ns.clubs[clubId].clubType==0 then
+				local id = "member-"..memberId;
+				opt_members.args[id] = {
+					type = "toggle", order = info.role,
+					name = info.name
+				}
 			end
-			if realm then
-				_name = _name .. C(" - "..realm,"ff888888");
-			end
-			opt_members.args[id] = {
-				type = "toggle", order = info.classID,
-				name = _name
-			}
 		end
 	end
 	return "";
@@ -287,7 +303,7 @@ end
 function ns.Options_AddCommunity(clubId)
 	local club,clubKey = ns.clubs[clubId],"Club-"..clubId;
 
-	if club.clubType~=1 then
+	if not ns.validClubTypes[club.clubType] then
 		return;
 	end
 
