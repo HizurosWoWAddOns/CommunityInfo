@@ -175,7 +175,7 @@ options = {
 		communities = {
 			type = "group", order = 100,
 			childGroups = "tree",
-			name = COMMUNITIES,
+			name = COMMUNITIES or L["Communities"],
 			get = comOpt, set = comOpt,
 			args = {
 				NoCommunityFound = {

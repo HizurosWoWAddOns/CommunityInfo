@@ -272,7 +272,7 @@ local function broker_OnClickClub(self,button,clubId)
 		local frame = CommunitiesFrame;
 		if frame and frame:IsShown() and frame.selectedClubId==clubId then
 			HideUIPanel(frame);
-		else
+		elseif CommunitiesHyperlink and CommunitiesHyperlink.OnClickReference then
 			CommunitiesHyperlink.OnClickReference(clubId)
 		end
 	else
