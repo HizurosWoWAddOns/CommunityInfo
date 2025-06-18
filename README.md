@@ -1,5 +1,5 @@
 # CommunityInfo (WoW AddOn)
-![Build](https://github.com/HizurosWoWAddOns/CommunityInfo/actions/workflows/bigwigsmods-packager.yml/badge.svg)
+![Build](https://img.shields.io/github/actions/workflow/status/HizurosWoWAddOns/CommunityInfo/packager.yml?style=flat-square)
 ![Tag](https://img.shields.io/github/v/tag/HizurosWoWAddOns/CommunityInfo?style=flat-square)
 ![Downloads](https://img.shields.io/github/downloads/HizurosWoWAddOns/CommunityInfo/total?style=flat-square)
 ![Downloads](https://img.shields.io/github/downloads/HizurosWoWAddOns/CommunityInfo/latest/total?style=flat-square)
