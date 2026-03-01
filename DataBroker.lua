@@ -213,7 +213,7 @@ local function broker_OnEnterClub(self,clubId)
 				C(scm(strCut(memberInfo.memberNote,18)),CGray),
 				memberInfo.role and COMMUNITY_MEMBER_ROLE_NAMES[memberInfo.role] or ""
 			);
-		elseif club.clubType==1 then
+		elseif club.clubType==1 and memberInfo.name~=nil then
 			local name,realm = strsplit("-",memberInfo.name,2);
 			realm = realm and C(" - "..realm,CYellow) or "";
 

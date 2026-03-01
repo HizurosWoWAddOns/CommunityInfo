@@ -142,15 +142,15 @@ icons = {
 	update=function()
 		local failed = false;
 		for key,club in pairs(ns.clubs)do
-			if tonumber(key) and club.avatarId and club.iconId==false then
-				C_Club.SetAvatarTexture(frame.icon, club.avatarId, club.clubType);
-				local iconId = frame.icon:GetTexture();
-				if iconId then
-					club.iconId = iconId;
-					ns.Broker_Update(club.clubId,"icon");
-				else
-					failed = true;
-				end
+			local avatarId
+			if tonumber(key) then
+				avatarId = club.avatarId or club.emblemInfo or false; -- ??
+			end
+			if avatarId and club.iconId==false then
+				club.iconId = avatarId;
+				ns.Broker_Update(club.clubId,"icon");
+			else
+				failed = true;
 			end
 		end
 		if failed then
@@ -161,6 +161,7 @@ icons = {
 
 members = {
 	fails = {},
+	updateFails = {},
 	queue = {},
 	presenceByBNetGuid={},
 	presenceByToonGuid={},
@@ -236,6 +237,10 @@ members = {
 		local memberInfo,msg = C_Club.GetMemberInfo(clubId,memberId);
 
 		if memberInfo then
+			if not HST.BullShitDetector("generalTesting",memberInfo.presence) then
+				members.updateFails[clubId.."^"..memberId] = time(); -- TODO: do deep scan after leaving dungeon or raid. damned blizzard.
+				return false;
+			end
 			if club.members[memberId]==nil then
 				club.members[memberId] = {presence=0};
 			end
